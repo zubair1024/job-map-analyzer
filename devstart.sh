@@ -5,5 +5,4 @@ code .
 cd ..
 cd app
 code .
-yarn start
 
