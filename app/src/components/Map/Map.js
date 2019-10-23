@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-
 import "./Map.css";
 
 class MapComponent extends Component {
@@ -13,8 +12,73 @@ class MapComponent extends Component {
   }
   componentDidMount() {
     this.onLoad();
+    setTimeout(() => {
+      this.renderE5Engineers();
+    }, 3000);
   }
+
+  getE5Engineers() {
+    return new Promise((resolve, reject) => {
+      import("../../rawdata/e5Engineers.json")
+        .then(data => {
+          if (data && data.default) {
+            const validatedData = data.default.filter(item => {
+              return item.lat && item.lng;
+            });
+            resolve(validatedData);
+          } else {
+            resolve([]);
+          }
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
+  }
+
+  async renderE5Engineers() {
+    try {
+      const e5Engineers = await this.getE5Engineers();
+      console.log(e5Engineers);
+      if (e5Engineers && e5Engineers.length) {
+        let markers = [];
+        e5Engineers.forEach(item => {
+          if (item.lat && item.lng) {
+            const marker = window.L.marker([item.lat, item.lng]).addTo(
+              this.mapElement
+            );
+            marker.bindPopup(`
+            <table class="popup-table">
+              <tr class="popup-table-row">
+                <td>Name</td>
+                <td>${item.FirstName}</td>
+              </tr>
+              <tr>
+                <td>Postcode</td>
+                <td>${item.MobileUserName}</td>
+              </tr>
+            </table>
+            `);
+            markers.push(marker);
+          }
+        });
+        this.setState({
+          e5Engineers: markers
+        });
+      } else {
+        throw new Error("No Engineers to be rendered");
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Error while rendering E5 Engineers`);
+    }
+  }
+
+  renderMarkers() {}
+
   onLoad() {
+    console.log(`came here`);
+
     const L = window.L;
     const $ = window.$;
     const config = window.config;
@@ -59,6 +123,8 @@ class MapComponent extends Component {
         zoom: 7,
         layers: [layerOSM]
       });
+
+    this.mapElement = map;
 
     // Add layers control
     L.control.layers(tileMaps, overlayMaps, { collapsed: false }).addTo(map);
