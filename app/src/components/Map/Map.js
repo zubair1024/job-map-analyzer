@@ -16,8 +16,10 @@ class MapComponent extends Component {
   }
 
   async run() {
-    // let postcodeWithRegions = await this.getGroupToRegions();
-    // console.log(postcodeWithRegions);
+    let postcodeWithRegions = await this.getGroupToRegions();
+    this.setState({
+      postcodeWithRegions: postcodeWithRegions
+    });
     this.onLoad();
     this.addControls();
   }
@@ -157,7 +159,6 @@ class MapComponent extends Component {
     const type = "serviceJob";
     try {
       const arrayContent = await this.getServiceJobs();
-      console.log(arrayContent);
       if (arrayContent && arrayContent.length) {
         let markers = [];
         arrayContent.forEach(item => {
