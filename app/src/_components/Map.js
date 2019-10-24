@@ -199,7 +199,7 @@ class Map extends Component {
     });
     if (tableContent) {
       content = `
-      <table class="popup-table">
+      <table class="table table-dark">
        ${tableContent}
       </table>
       `;
