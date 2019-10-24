@@ -1,8 +1,6 @@
 import React, { Component } from "react";
 import "./Map.css";
 
-// import groupToRegions from "../../rawdata/postCodeWithRegions.json";
-
 class MapComponent extends Component {
   state = {};
   render() {
@@ -14,12 +12,34 @@ class MapComponent extends Component {
   }
 
   componentDidMount() {
+    this.run();
+  }
+
+  async run() {
+    let postcodeWithRegions = await this.getGroupToRegions();
+    console.log(postcodeWithRegions);
     this.onLoad();
-    setTimeout(() => {
-      this.renderE5Engineers();
-      // this.renderBoilerJobs();
-      // this.renderServiceJobs();
-    }, 3000);
+    this.addControls();
+  }
+
+  getGroupToRegions() {
+    return new Promise((resolve, reject) => {
+      import("../../rawdata/postcodeWithRegions.json")
+        .then(data => {
+          if (data && data.default) {
+            // const validatedData = data.default.filter(item => {
+            //   return item.lat && item.lng;
+            // });
+            // resolve(validatedData);
+            resolve(data.default);
+          } else {
+            resolve([]);
+          }
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
   }
 
   getE5Engineers() {
@@ -64,7 +84,6 @@ class MapComponent extends Component {
     return new Promise((resolve, reject) => {
       import("../../rawdata/serviceJobs.json")
         .then(data => {
-          debugger;
           if (data && data.default) {
             const validatedData = data.default.filter(item => {
               return item.lat && item.lng;
@@ -177,17 +196,12 @@ class MapComponent extends Component {
         </tr>
       `;
     });
-    switch (type) {
-      case "e5Engineer":
-        content = `
-        <table class="popup-table">
-         ${tableContent}
-        </table>
-        `;
-        break;
-      default:
-        //do nothing
-        break;
+    if (tableContent) {
+      content = `
+      <table class="popup-table">
+       ${tableContent}
+      </table>
+      `;
     }
     return content;
   }
@@ -219,13 +233,68 @@ class MapComponent extends Component {
 
   removeMarkers() {
     return new Promise((resolve, reject) => {
-      let e5EngineerMarkers = this.state.e5Engineers;
-      if (e5EngineerMarkers && e5EngineerMarkers.length) {
-        e5EngineerMarkers.forEach(item => {
-          this.mapElement.removeLayer(item);
-        });
-      }
+      this.removeE5Engineers();
+      resolve();
     });
+  }
+
+  removeE5Engineers() {
+    let e5EngineerMarkers = this.state.e5Engineer;
+    if (e5EngineerMarkers && e5EngineerMarkers.length) {
+      e5EngineerMarkers.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+    }
+  }
+
+  removeServiceJobs() {
+    let seeviceJobMarkers = this.state.serviceJob;
+    if (seeviceJobMarkers && seeviceJobMarkers.length) {
+      seeviceJobMarkers.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+    }
+  }
+
+  addControls() {
+    const L = window.L;
+    L.control
+      .custom({
+        position: "bottomleft",
+        content: `
+        <div class="panel-body">
+          <div class="checkbox">
+            <label><input type="checkbox" value="e5Engineers">E5 Engineers</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" value="serviceJobs">Service Jobs</label>
+          </div>
+        </div>
+        `,
+        classes: "panel panel-default",
+        style: {},
+        events: {
+          click: data => {
+            if (data && data.srcElement && data.srcElement.type) {
+              switch (data.srcElement.value) {
+                case "e5Engineers":
+                  data.srcElement.checked
+                    ? this.renderE5Engineers()
+                    : this.removeE5Engineers();
+                  break;
+                case "serviceJobs":
+                  data.srcElement.checked
+                    ? this.renderServiceJobs()
+                    : this.removeServiceJobs();
+                  break;
+                default:
+                  break;
+              }
+            }
+          }
+        }
+      })
+      .addTo(this.mapElement);
   }
 
   onLoad() {
@@ -306,7 +375,6 @@ class MapComponent extends Component {
       const div = L.DomUtil.create("div", "control loader");
 
       div.innerHTML = `
-            <h4>Loading GeoJSON</h4>
             <div>\
                 Areas... <span id="loadAreas">&#x21BB;</span><br>
                 Districts... <span id="loadDistricts">&#x21BB;</span><br>
@@ -319,35 +387,35 @@ class MapComponent extends Component {
     loading.addTo(map);
 
     // Automatically set the GeoJSON layer depending on zoom level
-    map.on("zoomend", function() {
-      if (!(loaded.areas && loaded.districts && loaded.sectors)) {
-        return;
-      }
+    // map.on("zoomend", function() {
+    //   if (!(loaded.areas && loaded.districts && loaded.sectors)) {
+    //     return;
+    //   }
 
-      const zoom = map.getZoom();
+    //   const zoom = map.getZoom();
 
-      if (
-        zoom >= config.zoom.areas &&
-        zoom < config.zoom.districts &&
-        !map.hasLayer(layerAreas)
-      ) {
-        map.removeLayer(layerDistricts);
-        map.removeLayer(layerSectors);
-        map.addLayer(layerAreas);
-      } else if (
-        zoom >= config.zoom.districts &&
-        zoom < config.zoom.sectors &&
-        !map.hasLayer(layerDistricts)
-      ) {
-        map.removeLayer(layerAreas);
-        map.removeLayer(layerSectors);
-        map.addLayer(layerDistricts);
-      } else if (zoom >= config.zoom.sectors && !map.hasLayer(layerSectors)) {
-        map.removeLayer(layerAreas);
-        map.removeLayer(layerDistricts);
-        map.addLayer(layerSectors);
-      }
-    });
+    //   if (
+    //     zoom >= config.zoom.areas &&
+    //     zoom < config.zoom.districts &&
+    //     !map.hasLayer(layerAreas)
+    //   ) {
+    //     map.removeLayer(layerDistricts);
+    //     map.removeLayer(layerSectors);
+    //     map.addLayer(layerAreas);
+    //   } else if (
+    //     zoom >= config.zoom.districts &&
+    //     zoom < config.zoom.sectors &&
+    //     !map.hasLayer(layerDistricts)
+    //   ) {
+    //     map.removeLayer(layerAreas);
+    //     map.removeLayer(layerSectors);
+    //     map.addLayer(layerDistricts);
+    //   } else if (zoom >= config.zoom.sectors && !map.hasLayer(layerSectors)) {
+    //     map.removeLayer(layerAreas);
+    //     map.removeLayer(layerDistricts);
+    //     map.addLayer(layerSectors);
+    //   }
+    // });
 
     // Load postcode Areas GeoJSON file
     $.getJSON(config.files.areas, function(data) {
