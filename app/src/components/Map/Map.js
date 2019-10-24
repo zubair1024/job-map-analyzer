@@ -16,8 +16,8 @@ class MapComponent extends Component {
   }
 
   async run() {
-    let postcodeWithRegions = await this.getGroupToRegions();
-    console.log(postcodeWithRegions);
+    // let postcodeWithRegions = await this.getGroupToRegions();
+    // console.log(postcodeWithRegions);
     this.onLoad();
     this.addControls();
   }
@@ -134,9 +134,9 @@ class MapComponent extends Component {
         let markers = [];
         arrayContent.forEach(item => {
           if (item.lat && item.lng) {
-            const marker = window.L.marker([item.lat, item.lng]).addTo(
-              this.mapElement
-            );
+            const marker = window.L.marker([item.lat, item.lng], {
+              icon: this.markerIcon(type)
+            }).addTo(this.mapElement);
             marker.bindPopup(this.markerPopupContent(type, item));
             markers.push(marker);
           }
@@ -218,6 +218,10 @@ class MapComponent extends Component {
         icon =
           "https://res.cloudinary.com/razrlab/image/upload/v1571935748/service-marker_tzrx0s.png";
         break;
+      case "boilerJob":
+        icon =
+          "https://res.cloudinary.com/razrlab/image/upload/v1571935748/home-marker_sskts6.png";
+        break;
       default:
         //nothing
         break;
@@ -248,9 +252,18 @@ class MapComponent extends Component {
   }
 
   removeServiceJobs() {
-    let seeviceJobMarkers = this.state.serviceJob;
-    if (seeviceJobMarkers && seeviceJobMarkers.length) {
-      seeviceJobMarkers.forEach(item => {
+    let serviceJobMarkers = this.state.serviceJob;
+    if (serviceJobMarkers && serviceJobMarkers.length) {
+      serviceJobMarkers.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+    }
+  }
+
+  removeBoilerJobs() {
+    let boilerJobMarkers = this.state.boilerJob;
+    if (boilerJobMarkers && boilerJobMarkers.length) {
+      boilerJobMarkers.forEach(item => {
         this.mapElement.removeLayer(item);
       });
     }
@@ -269,6 +282,9 @@ class MapComponent extends Component {
           <div class="checkbox">
             <label><input type="checkbox" value="serviceJobs">Service Jobs</label>
           </div>
+          <div class="checkbox">
+            <label><input type="checkbox" value="boilerJobs">Boiler Jobs</label>
+          </div>
         </div>
         `,
         classes: "panel panel-default",
@@ -286,6 +302,11 @@ class MapComponent extends Component {
                   data.srcElement.checked
                     ? this.renderServiceJobs()
                     : this.removeServiceJobs();
+                  break;
+                case "boilerJobs":
+                  data.srcElement.checked
+                    ? this.renderBoilerJobs()
+                    : this.removeBoilerJobs();
                   break;
                 default:
                   break;
