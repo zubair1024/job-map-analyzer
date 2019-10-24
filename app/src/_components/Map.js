@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import "./Map.css";
 
-class MapComponent extends Component {
+class Map extends Component {
   state = {};
   render() {
     return (
@@ -26,7 +26,7 @@ class MapComponent extends Component {
 
   getGroupToRegions() {
     return new Promise((resolve, reject) => {
-      import("../../rawdata/postcodeWithRegions.json")
+      import("../rawdata/postcodeWithRegions.json")
         .then(data => {
           if (data && data.default) {
             // const validatedData = data.default.filter(item => {
@@ -46,7 +46,7 @@ class MapComponent extends Component {
 
   getE5Engineers() {
     return new Promise((resolve, reject) => {
-      import("../../rawdata/e5Engineers.json")
+      import("../rawdata/e5Engineers.json")
         .then(data => {
           if (data && data.default) {
             const validatedData = data.default.filter(item => {
@@ -65,7 +65,7 @@ class MapComponent extends Component {
 
   getBoilerJobs() {
     return new Promise((resolve, reject) => {
-      import("../../rawdata/boilerJobs.json")
+      import("../rawdata/boilerJobs.json")
         .then(data => {
           if (data && data.default) {
             const validatedData = data.default.filter(item => {
@@ -84,7 +84,7 @@ class MapComponent extends Component {
 
   getServiceJobs() {
     return new Promise((resolve, reject) => {
-      import("../../rawdata/serviceJobs.json")
+      import("../rawdata/serviceJobs.json")
         .then(data => {
           if (data && data.default) {
             const validatedData = data.default.filter(item => {
@@ -492,4 +492,4 @@ class MapComponent extends Component {
   }
 }
 
-export default MapComponent;
+export { Map };
