@@ -1,5 +1,5 @@
 export function configureFakeBackend() {
-    let users = [{ id: 1, username: 'test', password: 'test', firstName: 'Test', lastName: 'User' }];
+    let users = [{ id: 1, username: 'vp', password: 'vptester', firstName: 'Test', lastName: 'User' }];
     let realFetch = window.fetch;
     window.fetch = function (url, opts) {
         return new Promise((resolve, reject) => {
@@ -38,7 +38,7 @@ export function configureFakeBackend() {
                 if (url.endsWith('/users') && opts.method === 'GET') {
                     // check for fake auth token in header and return users if valid, this security 
                     // is implemented server side in a real application
-                    if (opts.headers && opts.headers.Authorization === `Basic ${window.btoa('test:test')}`) {
+                    if (opts.headers && opts.headers.Authorization === `Basic ${window.btoa('vp:vptester')}`) {
                         resolve({ ok: true, text: () => Promise.resolve(JSON.stringify(users)) });
                     } else {
                         // return 401 not authorised if token is null or invalid
