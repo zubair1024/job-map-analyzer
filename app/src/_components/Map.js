@@ -182,6 +182,46 @@ class Map extends Component {
     }
   }
 
+  async renderServiceJobsHeatMap() {
+    const type = "serviceJob";
+    const arrayContent = await this.getServiceJobs();
+    const addressPoints = arrayContent.map(function(p) {
+      return [p.lat, p.lng, 0.5];
+    });
+    const heat = window.L.heatLayer(addressPoints, {
+      radius: 10,
+      minOpacity: 1
+    }).addTo(this.mapElement);
+    this.setState({
+      [`${type}sHeatMap`]: heat
+    });
+    try {
+    } catch (err) {
+      console.error(err);
+      alert(`Error while rendering ${type}`);
+    }
+  }
+
+  async renderBoilerJobsHeatMap() {
+    const type = "boilerJob";
+    const arrayContent = await this.getBoilerJobs();
+    const addressPoints = arrayContent.map(function(p) {
+      return [p.lat, p.lng, 0.5];
+    });
+    const heat = window.L.heatLayer(addressPoints, {
+      radius: 10,
+      minOpacity: 1
+    }).addTo(this.mapElement);
+    this.setState({
+      [`${type}sHeatMap`]: heat
+    });
+    try {
+    } catch (err) {
+      console.error(err);
+      alert(`Error while rendering ${type}`);
+    }
+  }
+
   markerPopupContent(type, item) {
     let content = "";
     let tableContent = "";
@@ -189,18 +229,18 @@ class Map extends Component {
       tableContent =
         tableContent +
         `
-        <tr>
-          <td class="popup-table-row">
-              <td>${k}</td>
-              <td>${item[k]}</td>
-          </td>
+      <tr>
+      <td class="popup-table-row">
+      <td>${k}</td>
+      <td>${item[k]}</td>
+      </td>
         </tr>
-      `;
+        `;
     });
     if (tableContent) {
       content = `
       <table class="table table-dark">
-       ${tableContent}
+      ${tableContent}
       </table>
       `;
     }
@@ -261,6 +301,11 @@ class Map extends Component {
     }
   }
 
+  removeServiceJobsHeatMap() {
+    const layer = this.state.serviceJobsHeatMap;
+    layer && this.mapElement.removeLayer(layer);
+  }
+
   removeBoilerJobs() {
     let boilerJobMarkers = this.state.boilerJob;
     if (boilerJobMarkers && boilerJobMarkers.length) {
@@ -270,6 +315,10 @@ class Map extends Component {
     }
   }
 
+  removeBoilerJobsHeatMap() {
+    const layer = this.state.boilerJobsHeatMap;
+    layer && this.mapElement.removeLayer(layer);
+  }
   addControls() {
     const L = window.L;
     L.control
@@ -279,6 +328,12 @@ class Map extends Component {
         <div class="panel-body">
           <div class="checkbox">
             <label><input type="checkbox" value="e5Engineers">E5 Engineers</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" value="serviceJobsHeatMap">Service Jobs Heat Map</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" value="boilerJobsHeatMap">Boiler Jobs Heat Map</label>
           </div>
           <div class="checkbox">
             <label><input type="checkbox" value="serviceJobs">Service Jobs</label>
@@ -304,10 +359,20 @@ class Map extends Component {
                     ? this.renderServiceJobs()
                     : this.removeServiceJobs();
                   break;
+                case "serviceJobsHeatMap":
+                  data.srcElement.checked
+                    ? this.renderServiceJobsHeatMap()
+                    : this.removeServiceJobsHeatMap();
+                  break;
                 case "boilerJobs":
                   data.srcElement.checked
                     ? this.renderBoilerJobs()
                     : this.removeBoilerJobs();
+                  break;
+                case "boilerJobsHeatMap":
+                  data.srcElement.checked
+                    ? this.renderBoilerJobsHeatMap()
+                    : this.removeBoilerJobsHeatMap();
                   break;
                 default:
                   break;
@@ -336,12 +401,13 @@ class Map extends Component {
       layerAreas = L.geoJson(null, geoJsonLayerOptions),
       layerDistricts = L.geoJson(null, geoJsonLayerOptions),
       layerSectors = L.geoJson(null, geoJsonLayerOptions),
-      layerMapbox = L.tileLayer(config.mapbox.url, {
-        // Mapbox tile layer
-        id: config.mapbox.id,
-        attribution: config.mapbox.attribution,
-        maxZoom: config.zoom.max
-      }),
+      layerGoogle = L.tileLayer(
+        "http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}?key=AIzaSyC0AJcO-U5RksjP02AQHxEuFlEW5xSKzp8",
+        {
+          maxZoom: 20,
+          subdomains: ["mt0", "mt1", "mt2", "mt3"]
+        }
+      ),
       layerOSM = L.tileLayer(config.openStreetMap.url, {
         // OpenStreetMap tile layer (default)
         attribution: config.openStreetMap.attribution,
@@ -349,8 +415,8 @@ class Map extends Component {
       }),
       tileMaps = {
         // Tile map layer switcher
-        Mapbox: layerMapbox,
-        OpenStreetMap: layerOSM
+        "Google Maps": layerGoogle,
+        "RAZRMAPS": layerOSM
       },
       overlayMaps = {
         // GeoJSON layer switcher
