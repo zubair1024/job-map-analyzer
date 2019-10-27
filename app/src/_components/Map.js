@@ -24,16 +24,35 @@ class Map extends Component {
     this.addControls();
   }
 
+  getLeads() {
+    return new Promise((resolve, reject) => {
+      import("../rawdata/leads.json")
+        .then(data => {
+          if (data && data.default) {
+            const validatedData = data.default.filter(item => {
+              return item.lat && item.lng;
+            });
+            console.log(`render leads ${validatedData.length}`);
+            resolve(validatedData);
+          } else {
+            resolve([]);
+          }
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
+  }
+
   getGroupToRegions() {
     return new Promise((resolve, reject) => {
       import("../rawdata/postcodeWithRegions.json")
         .then(data => {
           if (data && data.default) {
-            // const validatedData = data.default.filter(item => {
-            //   return item.lat && item.lng;
-            // });
-            // resolve(validatedData);
-            resolve(data.default);
+            const validatedData = data.default.filter(item => {
+              return item.lat && item.lng;
+            });
+            resolve(validatedData);
           } else {
             resolve([]);
           }
@@ -182,6 +201,33 @@ class Map extends Component {
     }
   }
 
+  async renderLeads() {
+    const type = "lead";
+    try {
+      const arrayContent = await this.getLeads();
+      if (arrayContent && arrayContent.length) {
+        let markers = [];
+        arrayContent.forEach(item => {
+          if (item.lat && item.lng) {
+            const marker = window.L.marker([item.lat, item.lng], {
+              icon: this.markerIcon(type)
+            }).addTo(this.mapElement);
+            marker.bindPopup(this.markerPopupContent(type, item));
+            markers.push(marker);
+          }
+        });
+        this.setState({
+          [type]: markers
+        });
+      } else {
+        throw new Error(`No ${type} to be rendered`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Error while rendering ${type}`);
+    }
+  }
+
   async renderServiceJobsHeatMap() {
     const type = "serviceJob";
     const arrayContent = await this.getServiceJobs();
@@ -190,6 +236,27 @@ class Map extends Component {
     });
     const heat = window.L.heatLayer(addressPoints, {
       radius: 10,
+      minOpacity: 1
+    }).addTo(this.mapElement);
+    this.setState({
+      [`${type}sHeatMap`]: heat
+    });
+    try {
+    } catch (err) {
+      console.error(err);
+      alert(`Error while rendering ${type}`);
+    }
+  }
+
+  async renderLeadsHeatMap() {
+    const type = "lead";
+    const arrayContent = await this.getLeads();
+    debugger;
+    const addressPoints = arrayContent.map(function(p) {
+      return [p.lat, p.lng, 0.5];
+    });
+    const heat = window.L.heatLayer(addressPoints, {
+      radius: 15,
       minOpacity: 1
     }).addTo(this.mapElement);
     this.setState({
@@ -259,6 +326,7 @@ class Map extends Component {
         icon =
           "https://res.cloudinary.com/razrlab/image/upload/v1571935748/service-marker_tzrx0s.png";
         break;
+      case "lead":
       case "boilerJob":
         icon =
           "https://res.cloudinary.com/razrlab/image/upload/v1571935748/home-marker_sskts6.png";
@@ -301,8 +369,22 @@ class Map extends Component {
     }
   }
 
+  removeLeads() {
+    let leadMarkers = this.state.lead;
+    if (leadMarkers && leadMarkers.length) {
+      leadMarkers.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+    }
+  }
+
   removeServiceJobsHeatMap() {
     const layer = this.state.serviceJobsHeatMap;
+    layer && this.mapElement.removeLayer(layer);
+  }
+
+  removeLeadsHeatMap() {
+    const layer = this.state.leadsHeatMap;
     layer && this.mapElement.removeLayer(layer);
   }
 
@@ -330,6 +412,12 @@ class Map extends Component {
             <label><input type="checkbox" value="e5Engineers">E5 Engineers</label>
           </div>
           <div class="checkbox">
+            <label><input type="checkbox" value="leads">Leads</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" value="leadsHeatMap">Leads Heat Map</label>
+          </div>
+          <div class="checkbox">
             <label><input type="checkbox" value="serviceJobsHeatMap">Service Jobs Heat Map</label>
           </div>
           <div class="checkbox">
@@ -349,6 +437,16 @@ class Map extends Component {
           click: data => {
             if (data && data.srcElement && data.srcElement.type) {
               switch (data.srcElement.value) {
+                case "leads":
+                  data.srcElement.checked
+                    ? this.renderLeads()
+                    : this.removeLeads();
+                  break;
+                case "leadsHeatMap":
+                  data.srcElement.checked
+                    ? this.renderLeadsHeatMap()
+                    : this.removeLeadsHeatMap();
+                  break;
                 case "e5Engineers":
                   data.srcElement.checked
                     ? this.renderE5Engineers()
@@ -416,7 +514,7 @@ class Map extends Component {
       tileMaps = {
         // Tile map layer switcher
         "Google Maps": layerGoogle,
-        "RAZRMAPS": layerOSM
+        RAZRMAPS: layerOSM
       },
       overlayMaps = {
         // GeoJSON layer switcher
