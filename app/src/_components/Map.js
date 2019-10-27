@@ -152,17 +152,21 @@ class Map extends Component {
     try {
       const arrayContent = await this.getBoilerJobs();
       if (arrayContent && arrayContent.length) {
+        let markerLayer = window.L.markerClusterGroup();
         let markers = [];
         arrayContent.forEach(item => {
           if (item.lat && item.lng) {
             const marker = window.L.marker([item.lat, item.lng], {
               icon: this.markerIcon(type)
-            }).addTo(this.mapElement);
+            });
             marker.bindPopup(this.markerPopupContent(type, item));
+            markerLayer.addLayer(marker);
             markers.push(marker);
           }
+          markerLayer.addTo(this.mapElement);
         });
         this.setState({
+          [`${type}Cluster`]: markerLayer,
           [type]: markers
         });
       } else {
@@ -179,17 +183,21 @@ class Map extends Component {
     try {
       const arrayContent = await this.getServiceJobs();
       if (arrayContent && arrayContent.length) {
+        let markerLayer = window.L.markerClusterGroup();
         let markers = [];
         arrayContent.forEach(item => {
           if (item.lat && item.lng) {
             const marker = window.L.marker([item.lat, item.lng], {
               icon: this.markerIcon(type)
-            }).addTo(this.mapElement);
+            });
             marker.bindPopup(this.markerPopupContent(type, item));
+            markerLayer.addLayer(marker);
             markers.push(marker);
           }
+          markerLayer.addTo(this.mapElement);
         });
         this.setState({
+          [`${type}Cluster`]: markerLayer,
           [type]: markers
         });
       } else {
@@ -206,17 +214,21 @@ class Map extends Component {
     try {
       const arrayContent = await this.getLeads();
       if (arrayContent && arrayContent.length) {
+        let markerLayer = window.L.markerClusterGroup();
         let markers = [];
         arrayContent.forEach(item => {
           if (item.lat && item.lng) {
             const marker = window.L.marker([item.lat, item.lng], {
               icon: this.markerIcon(type)
-            }).addTo(this.mapElement);
+            });
             marker.bindPopup(this.markerPopupContent(type, item));
+            markerLayer.addLayer(marker);
             markers.push(marker);
           }
+          markerLayer.addTo(this.mapElement);
         });
         this.setState({
+          [`${type}Cluster`]: markerLayer,
           [type]: markers
         });
       } else {
@@ -361,20 +373,35 @@ class Map extends Component {
   }
 
   removeServiceJobs() {
-    let serviceJobMarkers = this.state.serviceJob;
-    if (serviceJobMarkers && serviceJobMarkers.length) {
-      serviceJobMarkers.forEach(item => {
+    let markers = this.state.serviceJob;
+    let clusters = this.state.serviceJobCluster;
+    if (markers && markers.length) {
+      markers.forEach(item => {
         this.mapElement.removeLayer(item);
       });
+      clusters && this.mapElement.removeLayer(clusters);
     }
   }
 
   removeLeads() {
-    let leadMarkers = this.state.lead;
-    if (leadMarkers && leadMarkers.length) {
-      leadMarkers.forEach(item => {
+    let markers = this.state.lead;
+    let clusters = this.state.leadCluster;
+    if (markers && markers.length) {
+      markers.forEach(item => {
         this.mapElement.removeLayer(item);
       });
+      clusters && this.mapElement.removeLayer(clusters);
+    }
+  }
+
+  removeBoilerJobs() {
+    let markers = this.state.boilerJob;
+    let clusters = this.state.boilerJobCluster;
+    if (markers && markers.length) {
+      markers.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+      clusters && this.mapElement.removeLayer(clusters);
     }
   }
 
@@ -386,15 +413,6 @@ class Map extends Component {
   removeLeadsHeatMap() {
     const layer = this.state.leadsHeatMap;
     layer && this.mapElement.removeLayer(layer);
-  }
-
-  removeBoilerJobs() {
-    let boilerJobMarkers = this.state.boilerJob;
-    if (boilerJobMarkers && boilerJobMarkers.length) {
-      boilerJobMarkers.forEach(item => {
-        this.mapElement.removeLayer(item);
-      });
-    }
   }
 
   removeBoilerJobsHeatMap() {
