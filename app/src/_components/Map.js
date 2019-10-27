@@ -163,8 +163,8 @@ class Map extends Component {
             markerLayer.addLayer(marker);
             markers.push(marker);
           }
-          markerLayer.addTo(this.mapElement);
         });
+        markerLayer.addTo(this.mapElement);
         this.setState({
           [`${type}Cluster`]: markerLayer,
           [type]: markers
@@ -194,8 +194,8 @@ class Map extends Component {
             markerLayer.addLayer(marker);
             markers.push(marker);
           }
-          markerLayer.addTo(this.mapElement);
         });
+        markerLayer.addTo(this.mapElement);
         this.setState({
           [`${type}Cluster`]: markerLayer,
           [type]: markers
@@ -225,8 +225,8 @@ class Map extends Component {
             markerLayer.addLayer(marker);
             markers.push(marker);
           }
-          markerLayer.addTo(this.mapElement);
         });
+        markerLayer.addTo(this.mapElement);
         this.setState({
           [`${type}Cluster`]: markerLayer,
           [type]: markers
@@ -263,12 +263,11 @@ class Map extends Component {
   async renderLeadsHeatMap() {
     const type = "lead";
     const arrayContent = await this.getLeads();
-    debugger;
     const addressPoints = arrayContent.map(function(p) {
       return [p.lat, p.lng, 0.5];
     });
     const heat = window.L.heatLayer(addressPoints, {
-      radius: 15,
+      radius: 10,
       minOpacity: 1
     }).addTo(this.mapElement);
     this.setState({
