@@ -147,6 +147,32 @@ class Map extends Component {
     }
   }
 
+  async renderE5EngineerCircles() {
+    const type = "e5Engineer";
+    try {
+      const arrayContent = await this.getE5Engineers();
+      if (arrayContent && arrayContent.length) {
+        let circles = [];
+        arrayContent.forEach(item => {
+          if (item.lat && item.lng) {
+            let circle = window.L.circle([item.lat, item.lng], 40233.6).addTo(
+              this.mapElement
+            );
+            circles.push(circle);
+          }
+        });
+        this.setState({
+          [`${type}Circle`]: circles
+        });
+      } else {
+        throw new Error(`No ${type} to be rendered`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Error while rendering ${type}`);
+    }
+  }
+
   async renderBoilerJobs() {
     const type = "boilerJob";
     try {
@@ -349,7 +375,8 @@ class Map extends Component {
     const iconElement = window.L.icon({
       iconUrl: icon,
       iconSize: [25, 25],
-      iconAnchor: [25, 25]
+      iconAnchor: [12, 25],
+      popupAnchor: [3, -40]
     });
 
     return iconElement;
@@ -360,6 +387,15 @@ class Map extends Component {
       this.removeE5Engineers();
       resolve();
     });
+  }
+
+  removeE5EngineerCircles() {
+    let circles = this.state.e5EngineerCircle;
+    if (circles && circles.length) {
+      circles.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+    }
   }
 
   removeE5Engineers() {
@@ -429,16 +465,19 @@ class Map extends Component {
             <label><input type="checkbox" value="e5Engineers">E5 Engineers</label>
           </div>
           <div class="checkbox">
+            <label><input type="checkbox" value="e5EngineerCircles">E5 Engineers Boundaries</label>
+          </div>
+          <div class="checkbox">
+          <label><input type="checkbox" value="leadsHeatMap">Leads Heat Map</label>
+          </div>
+          <div class="checkbox">
+          <label><input type="checkbox" value="serviceJobsHeatMap">Service Jobs Heat Map</label>
+          </div>
+          <div class="checkbox">
+          <label><input type="checkbox" value="boilerJobsHeatMap">Boiler Jobs Heat Map</label>
+          </div>
+          <div class="checkbox">
             <label><input type="checkbox" value="leads">Leads</label>
-          </div>
-          <div class="checkbox">
-            <label><input type="checkbox" value="leadsHeatMap">Leads Heat Map</label>
-          </div>
-          <div class="checkbox">
-            <label><input type="checkbox" value="serviceJobsHeatMap">Service Jobs Heat Map</label>
-          </div>
-          <div class="checkbox">
-            <label><input type="checkbox" value="boilerJobsHeatMap">Boiler Jobs Heat Map</label>
           </div>
           <div class="checkbox">
             <label><input type="checkbox" value="serviceJobs">Service Jobs</label>
@@ -468,6 +507,11 @@ class Map extends Component {
                   data.srcElement.checked
                     ? this.renderE5Engineers()
                     : this.removeE5Engineers();
+                  break;
+                case "e5EngineerCircles":
+                  data.srcElement.checked
+                    ? this.renderE5EngineerCircles()
+                    : this.removeE5EngineerCircles();
                   break;
                 case "serviceJobs":
                   data.srcElement.checked
