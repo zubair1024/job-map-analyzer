@@ -1,24 +1,33 @@
 import React, { Component } from "react";
 import "./Map.css";
 
+import TableComponent from "./TableComponent";
+
 class Map extends Component {
-  state = {};
+  state = {
+    tableData: {
+      columns: ["Group"],
+      rows: [
+        {
+          _id: "1234",
+          Group: "Group Name 1"
+        }
+      ]
+    }
+  };
+
   render() {
     return (
       <div>
         <div id="map"></div>
         <div id="sidebar">
           <h1>Groups</h1>
-          <table>
-            <tr>
-              <th>Name</th>
-              <th>Area</th>
-            </tr>
-            <tr>
-              <td>Name</td>
-              <td>Area</td>
-            </tr>
-          </table>
+          <TableComponent
+            data={this.state.tableData}
+            handleShow={this.handleShow}
+            handleEdit={this.handleEdit}
+            handleDelete={this.handleDelete}
+          />
         </div>
       </div>
     );
@@ -26,6 +35,17 @@ class Map extends Component {
 
   componentDidMount() {
     this.run();
+  }
+
+  handleShow(e) {
+    console.log(e.target.value);
+  }
+  handleEdit(e) {
+    console.log(e.target.value);
+  }
+
+  handleDelete(e) {
+    console.log(e.target.value);
   }
 
   async run() {
@@ -499,11 +519,13 @@ class Map extends Component {
             <label><input type="checkbox" value="boilerJobs">Boiler Jobs</label>
           </div>
           <hr />
-          <div class="checkbox">
-            <label><input type="checkbox" value="geofenceControls">Geofence Controls</label>
-          </div>
+          
         </div>
         `,
+
+        // <div class="checkbox">
+        //     <label><input type="checkbox" value="geofenceControls">Geofence Controls</label>
+        //   </div>
         classes: "panel panel-default",
         style: {},
         events: {
