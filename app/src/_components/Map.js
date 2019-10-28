@@ -8,7 +8,17 @@ class Map extends Component {
       <div>
         <div id="map"></div>
         <div id="sidebar">
-          <h1>leaflet-sidebar</h1>
+          <h1>Groups</h1>
+          <table>
+            <tr>
+              <th>Name</th>
+              <th>Area</th>
+            </tr>
+            <tr>
+              <td>Name</td>
+              <td>Area</td>
+            </tr>
+          </table>
         </div>
       </div>
     );
@@ -555,6 +565,58 @@ class Map extends Component {
       .addTo(this.mapElement);
   }
 
+  enableGeofenceEditControl() {
+    const L = window.L;
+    const map = this.mapElement;
+    let editableLayers = new L.FeatureGroup();
+    map.addLayer(editableLayers);
+
+    let drawPluginOptions = {
+      position: "topright",
+      draw: {
+        polygon: {
+          allowIntersection: false, // Restricts shapes to simple polygons
+          drawError: {
+            color: "#e1e100", // Color the shape will turn when intersects
+            message: "<strong>Oh snap!<strong> you can't draw that!" // Message that will show when intersect
+          },
+          shapeOptions: {
+            color: "#97009c"
+          }
+        },
+        // disable toolbar item by setting it to false
+        polyline: false,
+        circle: false, // Turns off this drawing tool
+        rectangle: false,
+        marker: false
+      },
+      edit: {
+        featureGroup: editableLayers, //REQUIRED!!
+        remove: false
+      }
+    };
+
+    // Initialise the draw control and pass it the FeatureGroup of editable layers
+    let drawControl = new L.Control.Draw(drawPluginOptions);
+    map.addControl(drawControl);
+
+    // let editableLayers = new L.FeatureGroup();
+    map.addLayer(editableLayers);
+
+    map.on("draw:created", e => {
+      console.log("draw:created");
+      console.log(e);
+      var type = e.layerType,
+        layer = e.layer;
+
+      if (type === "marker") {
+        layer.bindPopup("A popup!");
+      }
+
+      editableLayers.addLayer(layer);
+    });
+  }
+
   onLoad() {
     const L = window.L;
     const $ = window.$;
@@ -611,6 +673,8 @@ class Map extends Component {
     //expose some elements
     this.sidebarElement = sidebar;
     this.mapElement = map;
+
+    // this.enableGeofenceEditControl();
 
     // Add layers control
     L.control.layers(tileMaps, overlayMaps, { collapsed: false }).addTo(map);
