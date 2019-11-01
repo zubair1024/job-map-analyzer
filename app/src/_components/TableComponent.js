@@ -3,19 +3,15 @@ import React, { Component } from "react";
 class TableComponent extends Component {
   state = {};
   render() {
-    // Data
-    const dataColumns = this.props.data.columns;
     const dataRows = this.props.data.rows;
 
     const tableHeaders = (
       <thead>
         <tr>
-          <th key="showAll">Show</th>
-          {dataColumns.map(function(column, idx) {
-            return <th key={`header${idx}`}>{column}</th>;
-          })}
-          <th key="editall">Edit</th>
-          <th key="deleteall">Delete</th>
+          <th>Show</th>
+          <th>Name</th>
+          <th>Edit</th>
+          <th>Delete</th>
         </tr>
       </thead>
     );
@@ -30,9 +26,7 @@ class TableComponent extends Component {
               onChange={this.handleShow.bind(this)}
             />
           </td>
-          {dataColumns.map(function(column, idx) {
-            return <td key={`column${{ idx }}`}>{row[column]}</td>;
-          })}
+          <td key={`column${{ idx }}`}>{row.Group}</td>
           <td key={`edit${idx}`}>
             <button value={row._id} onClick={this.handleEdit.bind(this)}>
               Edit

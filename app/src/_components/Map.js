@@ -5,13 +5,18 @@ import TableComponent from "./TableComponent";
 
 class Map extends Component {
   state = {
+    newPolygon: false,
+    editPolygonDetails: {
+      name: "",
+      geoJSON: null
+    },
     tableData: {
       columns: ["Group"],
       rows: [
-        {
-          _id: "1234",
-          Group: "Group Name 1"
-        }
+        // {
+        //   _id: "1234",
+        //   Group: "Group Name 1"
+        // }
       ]
     },
     currentPolygonsInView: [],
@@ -23,13 +28,63 @@ class Map extends Component {
       <div>
         <div id="map"></div>
         <div id="sidebar">
-          <h1>Groups</h1>
-          <TableComponent
-            data={this.state.tableData}
-            handleShow={this.handleShow}
-            handleEdit={this.handleEdit}
-            handleDelete={this.handleDelete}
-          />
+          {!this.state.newPolygon && (
+            <div>
+              <h1>Groups</h1>
+              <TableComponent
+                data={this.state.tableData}
+                handleShow={this.handleShow}
+                handleEdit={this.handleEdit}
+                handleDelete={this.handleDelete}
+              />
+            </div>
+          )}
+
+          {!this.state.newPolygon && (
+            <button
+              onClick={() => {
+                this.createNewPolygon();
+              }}
+            >
+              Create New
+            </button>
+          )}
+
+          {this.state.newPolygon && (
+            <div>
+              <p>
+                <label>Name: </label>
+                <input
+                  value={this.state.editPolygonDetails.name}
+                  onChange={e => {
+                    this.setState({
+                      editPolygonDetails: {
+                        ...this.state.editPolygonDetails,
+                        name: e.target.value
+                      }
+                    });
+                  }}
+                  type="text"
+                />
+              </p>
+              <div>
+                <button
+                  onClick={() => {
+                    this.sumbitNewPolygon();
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    this.cancelNewPolygon();
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -48,6 +103,60 @@ class Map extends Component {
 
   handleDelete(e) {
     console.log(e.target.value);
+  }
+
+  async createNewPolygon() {
+    await this.removePolygonFromMap();
+    this.setState({
+      newPolygon: true
+    });
+    this.enablePolygonEditControl();
+  }
+
+  async sumbitNewPolygon() {
+    if (
+      this.state.editPolygonDetails.name !== "" &&
+      this.state.editPolygonDetails.geoJSON
+    ) {
+      await this.addNewPolygon(this.state.editPolygonDetails);
+      this.resetForm();
+      this.disablePolygonEditControl();
+      this.removePolygonFromMap();
+    } else {
+      alert(`Please input a valid name and shape`);
+    }
+  }
+
+  addNewPolygon(data) {
+    return new Promise((resolve, reject) => {
+      this.setState({
+        tableData: {
+          rows: [
+            ...this.state.tableData.rows,
+            {
+              _id: Math.random(),
+              Group: data.name
+            }
+          ]
+        }
+      });
+      resolve();
+    });
+  }
+
+  cancelNewPolygon() {
+    this.resetForm();
+    this.disablePolygonEditControl();
+  }
+
+  resetForm() {
+    this.setState({
+      newPolygon: false,
+      editPolygonDetails: {
+        name: "",
+        geoJSON: null
+      }
+    });
   }
 
   async run() {
@@ -587,67 +696,83 @@ class Map extends Component {
       .addTo(this.mapElement);
   }
 
-  enableGeofenceEditControl() {
+  enablePolygonEditControl() {
     const L = window.L;
     const map = this.mapElement;
 
-    let editableLayers = new L.FeatureGroup();
-    map.addLayer(editableLayers);
+    if (!this.drawControl || !this.editableLayers) {
+      this.editableLayers = new L.FeatureGroup();
+      map.addLayer(this.editableLayers);
 
-    let drawPluginOptions = {
-      position: "topright",
-      draw: {
-        polygon: {
-          allowIntersection: false, // Restricts shapes to simple polygons
-          drawError: {
-            color: "#e1e100", // Color the shape will turn when intersects
-            message: "<strong>Oh snap!<strong> you can't draw that!" // Message that will show when intersect
+      let drawPluginOptions = {
+        position: "topright",
+        draw: {
+          polygon: {
+            allowIntersection: false, // Restricts shapes to simple polygons
+            drawError: {
+              color: "#e1e100", // Color the shape will turn when intersects
+              message: "<strong>Oh snap!<strong> you can't draw that!" // Message that will show when intersect
+            },
+            shapeOptions: {
+              color: "#97009c"
+            }
           },
-          shapeOptions: {
-            color: "#97009c"
-          }
+          // disable toolbar item by setting it to false
+          polyline: false,
+          circle: false, // Turns off this drawing tool
+          rectangle: false,
+          marker: false
         },
-        // disable toolbar item by setting it to false
-        polyline: false,
-        circle: false, // Turns off this drawing tool
-        rectangle: false,
-        marker: false
-      },
-      edit: {
-        featureGroup: editableLayers, //REQUIRED!!
-        remove: false
-      }
-    };
+        edit: {
+          featureGroup: this.editableLayers, //REQUIRED!!
+          remove: false
+        }
+      };
+      this.drawControl = new L.Control.Draw(drawPluginOptions);
 
-    // Initialise the draw control and pass it the FeatureGroup of editable layers
-    let drawControl = new L.Control.Draw(drawPluginOptions);
-    map.addControl(drawControl);
+      map.on("draw:created", e => {
+        console.log("draw:created");
+        console.log(e);
+        const layer = e.layer;
+        const geoJSON = e.layer.toGeoJSON();
 
-    // let editableLayers = new L.FeatureGroup();
-    // map.addLayer(editableLayers);
+        this.setState({
+          editPolygonDetails: {
+            ...this.state.editPolygonDetails,
+            geoJSON: geoJSON
+          },
+          currentPolygonsInView: [layer]
+        });
 
-    map.on("draw:created", e => {
-      console.log("draw:created");
-      console.log(e);
-      const type = e.layerType;
-      const layer = e.layer;
-      const points = e.layer._latlngs;
-      const geoJSON = e.layer.toGeoJSON();
+        this.editableLayers.addLayer(layer);
+      });
 
-      if (type === "marker") {
-        layer.bindPopup("A popup!");
-      }
-      editableLayers.addLayer(layer);
-    });
+      map.on("draw:edited", e => {
+        console.log("draw:edited");
+        const layers = e.layers;
+        layers.eachLayer(function(layer) {
+          const geoJSON = layer.toGeoJSON();
+          this.setState({
+            editPolygonDetails: {
+              ...this.state.editPolygonDetails,
+              geoJSON: geoJSON,
+              currentPolygonsInView: [layer]
+            }
+          });
+        });
+      });
+    }
 
-    //TODO remove this
-    this.addPolygonToMap();
-    setTimeout(() => {
-      this.removePolygonFromMap();
-    }, 20 * 1000);
+    map.addControl(this.drawControl);
   }
 
-  addPolygonToMap() {
+  disablePolygonEditControl() {
+    if (this.drawControl) {
+      this.mapElement.removeControl(this.drawControl);
+    }
+  }
+
+  addSamplePolygonToMap() {
     //TODO remove
     const polygon = window.L.polygon(
       [
@@ -673,13 +798,17 @@ class Map extends Component {
   }
 
   removePolygonFromMap() {
-    const polygonLayers = this.state.currentPolygonsInView;
-    polygonLayers.forEach(item => {
-      this.mapElement.removeLayer(item);
-    });
-    const polygonLabels = this.state.currentPolygonLabels;
-    polygonLabels.forEach(item => {
-      this.mapElement.removeLayer(item);
+    console.log(`removePolygonFromMap`);
+    return new Promise((resolve, reject) => {
+      const polygonLayers = this.state.currentPolygonsInView;
+      polygonLayers.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+      const polygonLabels = this.state.currentPolygonLabels;
+      polygonLabels.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+      resolve();
     });
   }
 
@@ -739,8 +868,6 @@ class Map extends Component {
     //expose some elements
     this.sidebarElement = sidebar;
     this.mapElement = map;
-
-    this.enableGeofenceEditControl();
 
     // Add layers control
     L.control.layers(tileMaps, overlayMaps, { collapsed: false }).addTo(map);
