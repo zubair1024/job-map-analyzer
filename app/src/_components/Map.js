@@ -8,16 +8,11 @@ class Map extends Component {
     newPolygon: false,
     editPolygonDetails: {
       name: "",
-      geoJSON: null
+      layer: null
     },
     tableData: {
       columns: ["Group"],
-      rows: [
-        // {
-        //   _id: "1234",
-        //   Group: "Group Name 1"
-        // }
-      ]
+      rows: []
     },
     currentPolygonsInView: [],
     currentPolygonLabels: []
@@ -33,9 +28,9 @@ class Map extends Component {
               <h1>Groups</h1>
               <TableComponent
                 data={this.state.tableData}
-                handleShow={this.handleShow}
-                handleEdit={this.handleEdit}
-                handleDelete={this.handleDelete}
+                handleShow={this.handleShow.bind(this)}
+                handleEdit={this.handleEdit.bind(this)}
+                handleDelete={this.handleDelete.bind(this)}
               />
             </div>
           )}
@@ -95,14 +90,44 @@ class Map extends Component {
   }
 
   handleShow(e) {
+    console.log(`handleShow`);
     console.log(e.target.value);
+    const _id = e.target.value;
+    console.log("_id: ", _id);
+    const isSelected = e.target.checked;
+    console.log("isSelected: ", isSelected);
+    console.log(this.state.tableData.rows);
+    const layer = this.state.tableData.rows.filter(item => {
+      return _id.toString() === item._id.toString();
+    });
+    console.log("layer: ", layer);
   }
   handleEdit(e) {
+    console.log(`handleEdit`);
     console.log(e.target.value);
+    const _id = e.target.value;
+    console.log("_id: ", _id);
+    const isSelected = e.target.checked;
+    console.log("isSelected: ", isSelected);
+    console.log(this.state.tableData.rows);
+    const layer = this.state.tableData.rows.filter(item => {
+      return _id.toString() === item._id.toString();
+    });
+    console.log("layer: ", layer);
   }
 
   handleDelete(e) {
+    console.log(`handleDelete`);
     console.log(e.target.value);
+    const _id = e.target.value;
+    console.log("_id: ", _id);
+    const isSelected = e.target.checked;
+    console.log("isSelected: ", isSelected);
+    console.log(this.state.tableData.rows);
+    const layer = this.state.tableData.rows.filter(item => {
+      return _id.toString() === item._id.toString();
+    });
+    console.log("layer: ", layer);
   }
 
   async createNewPolygon() {
@@ -114,14 +139,15 @@ class Map extends Component {
   }
 
   async sumbitNewPolygon() {
+    console.log(this.state);
     if (
       this.state.editPolygonDetails.name !== "" &&
-      this.state.editPolygonDetails.geoJSON
+      this.state.editPolygonDetails.layer
     ) {
       await this.addNewPolygon(this.state.editPolygonDetails);
       this.resetForm();
       this.disablePolygonEditControl();
-      this.removePolygonFromMap();
+      await this.removePolygonFromMap();
     } else {
       alert(`Please input a valid name and shape`);
     }
@@ -135,7 +161,8 @@ class Map extends Component {
             ...this.state.tableData.rows,
             {
               _id: Math.random(),
-              Group: data.name
+              Group: data.name,
+              layer: data.layer
             }
           ]
         }
@@ -154,7 +181,7 @@ class Map extends Component {
       newPolygon: false,
       editPolygonDetails: {
         name: "",
-        geoJSON: null
+        layer: null
       }
     });
   }
@@ -739,7 +766,7 @@ class Map extends Component {
         this.setState({
           editPolygonDetails: {
             ...this.state.editPolygonDetails,
-            geoJSON: geoJSON
+            layer: layer
           },
           currentPolygonsInView: [layer]
         });
@@ -755,9 +782,9 @@ class Map extends Component {
           this.setState({
             editPolygonDetails: {
               ...this.state.editPolygonDetails,
-              geoJSON: geoJSON,
-              currentPolygonsInView: [layer]
-            }
+              layer: layer
+            },
+            currentPolygonsInView: [layer]
           });
         });
       });
