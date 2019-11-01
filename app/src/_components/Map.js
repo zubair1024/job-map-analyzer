@@ -13,7 +13,9 @@ class Map extends Component {
           Group: "Group Name 1"
         }
       ]
-    }
+    },
+    currentPolygonsInView: [],
+    currentPolygonLabels: []
   };
 
   render() {
@@ -519,13 +521,11 @@ class Map extends Component {
             <label><input type="checkbox" value="boilerJobs">Boiler Jobs</label>
           </div>
           <hr />
-          
+          <div class="checkbox">
+            <label><input type="checkbox" value="geofenceControls">Geofence Controls</label>
+          </div>  
         </div>
         `,
-
-        // <div class="checkbox">
-        //     <label><input type="checkbox" value="geofenceControls">Geofence Controls</label>
-        //   </div>
         classes: "panel panel-default",
         style: {},
         events: {
@@ -590,6 +590,7 @@ class Map extends Component {
   enableGeofenceEditControl() {
     const L = window.L;
     const map = this.mapElement;
+
     let editableLayers = new L.FeatureGroup();
     map.addLayer(editableLayers);
 
@@ -623,19 +624,62 @@ class Map extends Component {
     map.addControl(drawControl);
 
     // let editableLayers = new L.FeatureGroup();
-    map.addLayer(editableLayers);
+    // map.addLayer(editableLayers);
 
     map.on("draw:created", e => {
       console.log("draw:created");
       console.log(e);
-      var type = e.layerType,
-        layer = e.layer;
+      const type = e.layerType;
+      const layer = e.layer;
+      const points = e.layer._latlngs;
+      const geoJSON = e.layer.toGeoJSON();
 
       if (type === "marker") {
         layer.bindPopup("A popup!");
       }
-
       editableLayers.addLayer(layer);
+    });
+
+    //TODO remove this
+    this.addPolygonToMap();
+    setTimeout(() => {
+      this.removePolygonFromMap();
+    }, 20 * 1000);
+  }
+
+  addPolygonToMap() {
+    //TODO remove
+    const polygon = window.L.polygon(
+      [
+        [53.28492154619624, -1.69189453125],
+        [52.48947038534306, -1.1865234375],
+        [53.1928702436326, -0.054931640625],
+        [53.64463782485651, -0.54931640625]
+      ],
+      {
+        opacity: 1.0
+      }
+    ).addTo(this.mapElement);
+
+    const label = new window.L.Label();
+    label.setContent("MultiPolygon static label");
+    label.setLatLng(polygon.getBounds().getCenter());
+    this.mapElement.showLabel(label);
+
+    this.setState(prevState => ({
+      currentPolygonsInView: [...prevState.currentPolygonsInView, polygon],
+      currentPolygonLabels: [...prevState.currentPolygonsInView, label]
+    }));
+  }
+
+  removePolygonFromMap() {
+    const polygonLayers = this.state.currentPolygonsInView;
+    polygonLayers.forEach(item => {
+      this.mapElement.removeLayer(item);
+    });
+    const polygonLabels = this.state.currentPolygonLabels;
+    polygonLabels.forEach(item => {
+      this.mapElement.removeLayer(item);
     });
   }
 
@@ -696,7 +740,7 @@ class Map extends Component {
     this.sidebarElement = sidebar;
     this.mapElement = map;
 
-    // this.enableGeofenceEditControl();
+    this.enableGeofenceEditControl();
 
     // Add layers control
     L.control.layers(tileMaps, overlayMaps, { collapsed: false }).addTo(map);
