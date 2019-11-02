@@ -113,17 +113,30 @@ class Map extends Component {
   }
 
   handleDelete(e) {
-    console.log(`handleDelete`);
-    console.log(e.target.value);
-    const _id = e.target.value;
-    console.log("_id: ", _id);
-    const isSelected = e.target.checked;
-    console.log("isSelected: ", isSelected);
-    console.log(this.state.tableData.rows);
-    const layer = this.state.tableData.rows.find(item => {
-      return _id.toString() === item._id.toString();
-    });
-    console.log("layer: ", layer);
+    const confirmed = window.confirm(`Are you sure you want to delete?`);
+    if (confirmed) {
+      const _id = e.target.value;
+      //deselect the layer
+      const isSelected = false;
+
+      const selectedData = this.state.tableData.rows.find(item => {
+        return _id.toString() === item._id.toString();
+      });
+      if (selectedData && selectedData.layer) {
+        this.renderSelectedPolygon(selectedData, isSelected);
+      }
+
+      //refine the state of tabledata
+      const rows = this.state.tableData.rows.filter(item => {
+        return item._id && _id && item._id.toString() !== _id.toString();
+      });
+      this.setState({
+        tableData: {
+          ...this.state.tableData,
+          rows: rows
+        }
+      });
+    }
   }
 
   async renderSelectedPolygon(data, isSelected) {
@@ -227,6 +240,15 @@ class Map extends Component {
       this.state.editPolygonDetails.name !== "" &&
       this.state.editPolygonDetails.layer
     ) {
+      //name validation
+      const existingName = this.state.tableData.rows.find(
+        item => item.Group === this.state.editPolygonDetails.name
+      );
+      if (existingName) {
+        alert(`Name already exists`);
+        return;
+      }
+
       await this.addNewPolygon(this.state.editPolygonDetails);
       this.resetForm();
       this.disablePolygonEditControl();
