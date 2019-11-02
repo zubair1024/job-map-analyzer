@@ -194,6 +194,26 @@ class Map extends Component {
     });
   }
 
+  removeAllPolygonsFromMap() {
+    return new Promise((resolve, reject) => {
+      const polygonLayers = this.state.currentPolygonsInView;
+      polygonLayers.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+      const polygonLabels = this.state.currentPolygonLabels;
+      polygonLabels.forEach(item => {
+        this.mapElement.removeLayer(item);
+      });
+
+      //save new state
+      this.setState({
+        currentPolygonsInView: [],
+        currentPolygonLabels: []
+      });
+      resolve();
+    });
+  }
+
   async createNewPolygon() {
     await this.removeAllPolygonsFromMap();
     this.setState({
@@ -858,27 +878,6 @@ class Map extends Component {
     if (this.drawControl) {
       this.mapElement.removeControl(this.drawControl);
     }
-  }
-
-  removeAllPolygonsFromMap() {
-    console.log(`removeAllPolygonsFromMap`);
-    return new Promise((resolve, reject) => {
-      const polygonLayers = this.state.currentPolygonsInView;
-      polygonLayers.forEach(item => {
-        this.mapElement.removeLayer(item);
-      });
-      const polygonLabels = this.state.currentPolygonLabels;
-      polygonLabels.forEach(item => {
-        this.mapElement.removeLayer(item);
-      });
-
-      //save new state
-      this.setState({
-        currentPolygonsInView: [],
-        currentPolygonLabels: []
-      });
-      resolve();
-    });
   }
 
   onLoad() {
