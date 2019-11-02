@@ -2,9 +2,13 @@ import React, { Component } from "react";
 
 import { CSVLink } from "react-csv";
 
+import classifyPoint from "robust-point-in-polygon";
+
 class TableComponent extends Component {
   state = {
+    loadingDownloadLink: false,
     downloadLink: false,
+    downloadLeadNumber: null,
     downloadData: []
   };
   render() {
@@ -42,11 +46,11 @@ class TableComponent extends Component {
               Delete
             </button>
           </td>
-          {/* <td key={`download${idx}`}>
+          <td key={`download${idx}`}>
             <button value={row._id} onClick={this.handleDownload.bind(this)}>
               Download
             </button>
-          </td> */}
+          </td>
         </tr>
       );
     });
@@ -56,11 +60,17 @@ class TableComponent extends Component {
         <CSVLink
           data={this.state.downloadData}
           filename={"my-file.csv"}
-          className="btn btn-primary text-white"
+          className="btn btn-dark"
           target="_blank"
         >
-          Download me
+          Download {this.state.downloadLeadNumber} Leads
         </CSVLink>
+      </div>
+    );
+
+    const loadingComponent = this.state.loadingDownloadLink && (
+      <div>
+        <h3>Loading...</h3>
       </div>
     );
 
@@ -72,6 +82,7 @@ class TableComponent extends Component {
           <tbody>{tableBody}</tbody>
         </table>
         {downloadLink}
+        {loadingComponent}
       </div>
     );
   }
@@ -85,14 +96,72 @@ class TableComponent extends Component {
   handleDelete(e) {
     this.props.handleDelete(e);
   }
-  handleDownload(e) {
-    this.setState({
-      downloadData: [
-        { firstname: "Ahmed", lastname: "Tomi", email: "ah@smthing.co.com" },
-        { firstname: "Raed", lastname: "Labes", email: "rl@smthing.co.com" },
-        { firstname: "Yezzi", lastname: "Min l3b", email: "ymin@cocococo.com" }
-      ],
-      downloadLink: true
+  async handleDownload(e) {
+    try {
+      this.setState({
+        loadingDownloadLink: true,
+        downloadLink: false
+      });
+      const data = this.props.data.rows.find(item => {
+        return item._id.toString() === e.target.value.toString();
+      });
+      if (data && data.layer) {
+        const polygonCoords = data.layer.getLatLngs().map(item => {
+          return [item.lat, item.lng];
+        });
+        const leads = await this.getLeads(polygonCoords);
+        if (leads.length) {
+          this.setState({
+            downloadLeadNumber: leads.length,
+            loadingDownloadLink: false,
+            downloadData: leads,
+            downloadLink: true
+          });
+        } else {
+          this.setState({
+            downloadLeadNumber: null,
+            loadingDownloadLink: false,
+            downloadData: [],
+            downloadLink: false
+          });
+          alert(`There are no leads in the selected cluster!`);
+        }
+      }
+    } catch (err) {
+      alert(err);
+      this.setState({
+        downloadLeadNumber: null,
+        loadingDownloadLink: false,
+        downloadData: [],
+        downloadLink: false
+      });
+    }
+  }
+
+  getLeads(polygonCoords) {
+    return new Promise((resolve, reject) => {
+      import("../rawdata/leads.json")
+        .then(data => {
+          if (data && data.default) {
+            const validatedData = data.default.filter(item => {
+              if (item.lat && item.lng) {
+                const classification = classifyPoint(polygonCoords, [
+                  item.lat,
+                  item.lng
+                ]);
+                return classification === -1 || classification === 0;
+              } else {
+                return false;
+              }
+            });
+            resolve(validatedData);
+          } else {
+            resolve([]);
+          }
+        })
+        .catch(err => {
+          reject(err);
+        });
     });
   }
 }
