@@ -863,7 +863,7 @@ class Map extends Component {
           </div>
           <hr />
           <div class="checkbox">
-            <label><input type="checkbox" value="geofenceControls">Geofence Controls</label>
+            <label><input type="checkbox" value="geofenceControls">Polygon Controls</label>
           </div>  
         </div>
         `,
