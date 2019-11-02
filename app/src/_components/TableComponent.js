@@ -21,6 +21,7 @@ class TableComponent extends Component {
           <th>Name</th>
           <th>Edit</th>
           <th>Delete</th>
+          <th>Download Leads</th>
         </tr>
       </thead>
     );
@@ -37,17 +38,29 @@ class TableComponent extends Component {
           </td>
           <td key={`column${{ idx }}`}>{row.Group}</td>
           <td key={`edit${idx}`}>
-            <button value={row._id} onClick={this.handleEdit.bind(this)}>
+            <button
+              className="btn btn-dark"
+              value={row._id}
+              onClick={this.handleEdit.bind(this)}
+            >
               Edit
             </button>
           </td>
           <td key={`delete${idx}`}>
-            <button value={row._id} onClick={this.handleDelete.bind(this)}>
+            <button
+              className="btn btn-dark"
+              value={row._id}
+              onClick={this.handleDelete.bind(this)}
+            >
               Delete
             </button>
           </td>
           <td key={`download${idx}`}>
-            <button value={row._id} onClick={this.handleDownload.bind(this)}>
+            <button
+              className="btn btn-dark"
+              value={row._id}
+              onClick={this.handleDownload.bind(this)}
+            >
               Download
             </button>
           </td>
@@ -56,7 +69,7 @@ class TableComponent extends Component {
     });
 
     const downloadLink = this.state.downloadLink && (
-      <div>
+      <div style={{ float: "right" }}>
         <CSVLink
           data={this.state.downloadData}
           filename={"my-file.csv"}

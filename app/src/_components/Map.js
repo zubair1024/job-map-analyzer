@@ -25,7 +25,7 @@ class Map extends Component {
         <div id="sidebar">
           {!this.state.newPolygon && !this.state.editPolygon && (
             <div>
-              <h1>Groups</h1>
+              <h3>Groups</h3>
               <TableComponent
                 data={this.state.tableData}
                 handleShow={this.handleShow.bind(this)}
@@ -33,41 +33,68 @@ class Map extends Component {
                 handleDelete={this.handleDelete.bind(this)}
               />
               <button
+                className="btn btn-primary"
                 onClick={() => {
                   this.createNewPolygon();
                 }}
               >
                 Create New
               </button>
+
+              {/* <div className="form-group">
+                <label for="exampleInputEmail1">Email address</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  id="exampleInputEmail1"
+                  aria-describedby="emailHelp"
+                  placeholder="Enter email"
+                ></input>
+                <small id="emailHelp" className="form-text text-muted">
+                  We'll never share your email with anyone else.
+                </small>
+              </div>
+              <button type="submit" className="btn btn-primary">
+                Submit
+              </button> */}
             </div>
           )}
 
           {this.state.newPolygon && (
             <div>
-              <p>
-                <label>Name: </label>
-                <input
-                  value={this.state.editPolygonDetails.name}
-                  onChange={e => {
-                    this.setState({
-                      editPolygonDetails: {
-                        ...this.state.editPolygonDetails,
-                        name: e.target.value
-                      }
-                    });
-                  }}
-                  type="text"
-                />
-              </p>
-              <div>
+              <div className="row" style={{ marginTop: "5vh" }}>
+                <div className="form-group">
+                  <label for="exampleInputEmail1">Group Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="exampleInputEmail1"
+                    aria-describedby="emailHelp"
+                    placeholder="Enter Name"
+                    value={this.state.editPolygonDetails.name}
+                    onChange={e => {
+                      this.setState({
+                        editPolygonDetails: {
+                          ...this.state.editPolygonDetails,
+                          name: e.target.value
+                        }
+                      });
+                    }}
+                  ></input>
+                  <small id="emailHelp" className="form-text text-muted">
+                    Please enter a unqiue group name.
+                  </small>
+                </div>
                 <button
+                  className="btn btn-dark"
                   onClick={() => {
                     this.sumbitNewPolygon();
                   }}
                 >
                   Save
-                </button>
+                </button>{" "}
                 <button
+                  className="btn btn-danger"
                   onClick={() => {
                     this.cancelNewPolygon();
                   }}
@@ -80,30 +107,39 @@ class Map extends Component {
 
           {this.state.editPolygon && (
             <div>
-              <p>
-                <label>Name: </label>
-                <input
-                  value={this.state.editPolygonDetails.name}
-                  onChange={e => {
-                    this.setState({
-                      editPolygonDetails: {
-                        ...this.state.editPolygonDetails,
-                        name: e.target.value
-                      }
-                    });
-                  }}
-                  type="text"
-                />
-              </p>
-              <div>
+              <div className="row" style={{ marginTop: "5vh" }}>
+                <div className="form-group">
+                  <label for="exampleInputEmail1">Group Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="exampleInputEmail1"
+                    aria-describedby="emailHelp"
+                    placeholder="Enter Name"
+                    value={this.state.editPolygonDetails.name}
+                    onChange={e => {
+                      this.setState({
+                        editPolygonDetails: {
+                          ...this.state.editPolygonDetails,
+                          name: e.target.value
+                        }
+                      });
+                    }}
+                  ></input>
+                  <small id="emailHelp" className="form-text text-muted">
+                    Please enter a unqiue group name.
+                  </small>
+                </div>
                 <button
+                  className="btn btn-dark"
                   onClick={() => {
                     this.sumbitEditedPolygon();
                   }}
                 >
                   Save
-                </button>
+                </button>{" "}
                 <button
+                  className="btn btn-danger"
                   onClick={() => {
                     this.cancelEditedPolygon();
                   }}
