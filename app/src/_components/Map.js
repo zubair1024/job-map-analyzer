@@ -80,6 +80,42 @@ class Map extends Component {
               </div>
             </div>
           )}
+
+          {this.state.editPolygon && (
+            <div>
+              <p>
+                <label>Name: </label>
+                <input
+                  value={this.state.editPolygonDetails.name}
+                  onChange={e => {
+                    this.setState({
+                      editPolygonDetails: {
+                        ...this.state.editPolygonDetails,
+                        name: e.target.value
+                      }
+                    });
+                  }}
+                  type="text"
+                />
+              </p>
+              <div>
+                <button
+                  onClick={() => {
+                    this.sumbitNewPolygon();
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    this.cancelNewPolygon();
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -98,18 +134,27 @@ class Map extends Component {
     if (selectedData && selectedData.layer)
       this.renderSelectedPolygon(selectedData, isSelected);
   }
-  handleEdit(e) {
-    console.log(`handleEdit`);
-    console.log(e.target.value);
+
+  async handleEdit(e) {
     const _id = e.target.value;
-    console.log("_id: ", _id);
-    const isSelected = e.target.checked;
-    console.log("isSelected: ", isSelected);
-    console.log(this.state.tableData.rows);
-    const layer = this.state.tableData.rows.find(item => {
+    const isSelected = true;
+    const selectedData = this.state.tableData.rows.find(item => {
       return _id.toString() === item._id.toString();
     });
-    console.log("layer: ", layer);
+    if (selectedData && selectedData.layer) {
+      await this.removeAllPolygonsFromMap();
+      await this.renderSelectedPolygon(selectedData, isSelected);
+      //enable controls and add poly to editable layer
+      this.enablePolygonEditControl();
+      this.editableLayers.addLayer(selectedData.layer);
+      this.setState({
+        editPolygon: true,
+        editPolygonDetails: {
+          name: selectedData.Group,
+          
+        }
+      });
+    }
   }
 
   handleDelete(e) {
