@@ -23,7 +23,7 @@ class Map extends Component {
       <div>
         <div id="map"></div>
         <div id="sidebar">
-          {!this.state.newPolygon && (
+          {!this.state.newPolygon && !this.state.editPolygon && (
             <div>
               <h1>Groups</h1>
               <TableComponent
@@ -32,17 +32,14 @@ class Map extends Component {
                 handleEdit={this.handleEdit.bind(this)}
                 handleDelete={this.handleDelete.bind(this)}
               />
+              <button
+                onClick={() => {
+                  this.createNewPolygon();
+                }}
+              >
+                Create New
+              </button>
             </div>
-          )}
-
-          {!this.state.newPolygon && (
-            <button
-              onClick={() => {
-                this.createNewPolygon();
-              }}
-            >
-              Create New
-            </button>
           )}
 
           {this.state.newPolygon && (
@@ -101,14 +98,14 @@ class Map extends Component {
               <div>
                 <button
                   onClick={() => {
-                    this.sumbitNewPolygon();
+                    this.sumbitEditedPolygon();
                   }}
                 >
                   Save
                 </button>
                 <button
                   onClick={() => {
-                    this.cancelNewPolygon();
+                    this.cancelEditedPolygon();
                   }}
                 >
                   Cancel
@@ -150,8 +147,9 @@ class Map extends Component {
       this.setState({
         editPolygon: true,
         editPolygonDetails: {
+          _id: _id,
           name: selectedData.Group,
-          
+          layer: selectedData.layer
         }
       });
     }
@@ -303,6 +301,31 @@ class Map extends Component {
     }
   }
 
+  async sumbitEditedPolygon() {
+    if (
+      this.state.editPolygonDetails.name !== "" &&
+      this.state.editPolygonDetails.layer
+    ) {
+      //name validation
+      const existingName = this.state.tableData.rows.find(
+        item =>
+          item.Group === this.state.editPolygonDetails.name &&
+          item._id.toString() !== this.state.editPolygonDetails._id.toString()
+      );
+      if (existingName) {
+        alert(`Name already exists`);
+        return;
+      }
+
+      await this.addEditedPolygon(this.state.editPolygonDetails);
+      this.resetForm();
+      this.disablePolygonEditControl();
+      await this.removeAllPolygonsFromMap();
+    } else {
+      alert(`Please input a valid name and shape`);
+    }
+  }
+
   addNewPolygon(data) {
     return new Promise((resolve, reject) => {
       this.setState({
@@ -321,14 +344,46 @@ class Map extends Component {
     });
   }
 
+  addEditedPolygon(data) {
+    return new Promise((resolve, reject) => {
+      const rows = this.state.tableData.rows.map(item => {
+        if (
+          this.state.editPolygonDetails._id.toString() === item._id.toString()
+        ) {
+          return Object.assign(item, {
+            name: this.state.editPolygonDetails.name,
+            layer: this.state.editPolygonDetails.layer
+          });
+        } else {
+          return item;
+        }
+      });
+
+      this.setState({
+        tableData: {
+          rows: rows
+        }
+      });
+      resolve();
+    });
+  }
+
   cancelNewPolygon() {
     this.resetForm();
+    this.removeAllPolygonsFromMap();
+    this.disablePolygonEditControl();
+  }
+
+  cancelEditedPolygon() {
+    this.resetForm();
+    this.removeAllPolygonsFromMap();
     this.disablePolygonEditControl();
   }
 
   resetForm() {
     this.setState({
       newPolygon: false,
+      editPolygon: false,
       editPolygonDetails: {
         name: "",
         layer: null
@@ -909,7 +964,6 @@ class Map extends Component {
 
       map.on("draw:created", e => {
         console.log("draw:created");
-        console.log(e);
         const layer = e.layer;
 
         this.setState({
