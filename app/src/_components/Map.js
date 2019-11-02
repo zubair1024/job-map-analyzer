@@ -90,17 +90,13 @@ class Map extends Component {
   }
 
   handleShow(e) {
-    console.log(`handleShow`);
-    console.log(e.target.value);
     const _id = e.target.value;
-    console.log("_id: ", _id);
     const isSelected = e.target.checked;
-    console.log("isSelected: ", isSelected);
-    console.log(this.state.tableData.rows);
-    const layer = this.state.tableData.rows.filter(item => {
+    const selectedData = this.state.tableData.rows.find(item => {
       return _id.toString() === item._id.toString();
     });
-    console.log("layer: ", layer);
+    if (selectedData && selectedData.layer)
+      this.renderSelectedPolygon(selectedData, isSelected);
   }
   handleEdit(e) {
     console.log(`handleEdit`);
@@ -110,7 +106,7 @@ class Map extends Component {
     const isSelected = e.target.checked;
     console.log("isSelected: ", isSelected);
     console.log(this.state.tableData.rows);
-    const layer = this.state.tableData.rows.filter(item => {
+    const layer = this.state.tableData.rows.find(item => {
       return _id.toString() === item._id.toString();
     });
     console.log("layer: ", layer);
@@ -124,14 +120,82 @@ class Map extends Component {
     const isSelected = e.target.checked;
     console.log("isSelected: ", isSelected);
     console.log(this.state.tableData.rows);
-    const layer = this.state.tableData.rows.filter(item => {
+    const layer = this.state.tableData.rows.find(item => {
       return _id.toString() === item._id.toString();
     });
     console.log("layer: ", layer);
   }
 
+  async renderSelectedPolygon(data, isSelected) {
+    if (data.layer) {
+      const polygon = data.layer;
+      if (isSelected) {
+        await this.addPolygonAndLabelToMap(data, polygon);
+      } else {
+        await this.removePolygonAndLabelFromMap(data, polygon);
+      }
+    }
+  }
+
+  addPolygonAndLabelToMap(data, polygon) {
+    return new Promise(resolve => {
+      //add to map
+      polygon._parentId = data._id;
+      polygon.addTo(this.mapElement);
+      //add label to map
+      const label = new window.L.Label();
+      label.setContent(data.Group);
+      label.setLatLng(polygon.getBounds().getCenter());
+      label._parentId = data._id;
+      polygon.bindLabel(label);
+      this.mapElement.showLabel(label);
+      //save state
+      this.setState(prevState => ({
+        currentPolygonsInView: [...prevState.currentPolygonsInView, polygon],
+        currentPolygonLabels: [...prevState.currentPolygonLabels, label]
+      }));
+      resolve();
+    });
+  }
+
+  removePolygonAndLabelFromMap(data, polygon) {
+    return new Promise(resolve => {
+      const label = this.state.currentPolygonLabels.find(item => {
+        return (
+          item._parentId &&
+          data._id &&
+          item._parentId.toString() === data._id.toString()
+        );
+      });
+
+      //remove them from the map
+      if (label) this.mapElement.removeLayer(label);
+      if (polygon) this.mapElement.removeLayer(polygon);
+
+      const currentPolygonsInView = this.state.currentPolygonsInView.filter(
+        item =>
+          item._parentId &&
+          label._parentId &&
+          item._parentId.toString() !== label._parentId.toString()
+      );
+      const currentPolygonLabels = this.state.currentPolygonLabels.filter(
+        item =>
+          item._parentId &&
+          label._parentId &&
+          item._parentId.toString() !== label._parentId.toString()
+      );
+
+      //save state
+      this.setState({
+        currentPolygonsInView: currentPolygonsInView,
+        currentPolygonLabels: currentPolygonLabels
+      });
+      resolve();
+    });
+  }
+
   async createNewPolygon() {
-    await this.removePolygonFromMap();
+    await this.removeAllPolygonsFromMap();
     this.setState({
       newPolygon: true
     });
@@ -139,7 +203,6 @@ class Map extends Component {
   }
 
   async sumbitNewPolygon() {
-    console.log(this.state);
     if (
       this.state.editPolygonDetails.name !== "" &&
       this.state.editPolygonDetails.layer
@@ -147,7 +210,7 @@ class Map extends Component {
       await this.addNewPolygon(this.state.editPolygonDetails);
       this.resetForm();
       this.disablePolygonEditControl();
-      await this.removePolygonFromMap();
+      await this.removeAllPolygonsFromMap();
     } else {
       alert(`Please input a valid name and shape`);
     }
@@ -761,7 +824,6 @@ class Map extends Component {
         console.log("draw:created");
         console.log(e);
         const layer = e.layer;
-        const geoJSON = e.layer.toGeoJSON();
 
         this.setState({
           editPolygonDetails: {
@@ -777,8 +839,7 @@ class Map extends Component {
       map.on("draw:edited", e => {
         console.log("draw:edited");
         const layers = e.layers;
-        layers.eachLayer(function(layer) {
-          const geoJSON = layer.toGeoJSON();
+        layers.eachLayer(layer => {
           this.setState({
             editPolygonDetails: {
               ...this.state.editPolygonDetails,
@@ -799,33 +860,8 @@ class Map extends Component {
     }
   }
 
-  addSamplePolygonToMap() {
-    //TODO remove
-    const polygon = window.L.polygon(
-      [
-        [53.28492154619624, -1.69189453125],
-        [52.48947038534306, -1.1865234375],
-        [53.1928702436326, -0.054931640625],
-        [53.64463782485651, -0.54931640625]
-      ],
-      {
-        opacity: 1.0
-      }
-    ).addTo(this.mapElement);
-
-    const label = new window.L.Label();
-    label.setContent("MultiPolygon static label");
-    label.setLatLng(polygon.getBounds().getCenter());
-    this.mapElement.showLabel(label);
-
-    this.setState(prevState => ({
-      currentPolygonsInView: [...prevState.currentPolygonsInView, polygon],
-      currentPolygonLabels: [...prevState.currentPolygonsInView, label]
-    }));
-  }
-
-  removePolygonFromMap() {
-    console.log(`removePolygonFromMap`);
+  removeAllPolygonsFromMap() {
+    console.log(`removeAllPolygonsFromMap`);
     return new Promise((resolve, reject) => {
       const polygonLayers = this.state.currentPolygonsInView;
       polygonLayers.forEach(item => {
@@ -834,6 +870,12 @@ class Map extends Component {
       const polygonLabels = this.state.currentPolygonLabels;
       polygonLabels.forEach(item => {
         this.mapElement.removeLayer(item);
+      });
+
+      //save new state
+      this.setState({
+        currentPolygonsInView: [],
+        currentPolygonLabels: []
       });
       resolve();
     });
