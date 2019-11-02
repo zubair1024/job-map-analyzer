@@ -1,7 +1,12 @@
 import React, { Component } from "react";
 
+import { CSVLink } from "react-csv";
+
 class TableComponent extends Component {
-  state = {};
+  state = {
+    downloadLink: false,
+    downloadData: []
+  };
   render() {
     const dataRows = this.props.data.rows;
 
@@ -37,16 +42,37 @@ class TableComponent extends Component {
               Delete
             </button>
           </td>
+          {/* <td key={`download${idx}`}>
+            <button value={row._id} onClick={this.handleDownload.bind(this)}>
+              Download
+            </button>
+          </td> */}
         </tr>
       );
     });
 
+    const downloadLink = this.state.downloadLink && (
+      <div>
+        <CSVLink
+          data={this.state.downloadData}
+          filename={"my-file.csv"}
+          className="btn btn-primary text-white"
+          target="_blank"
+        >
+          Download me
+        </CSVLink>
+      </div>
+    );
+
     // Decorate with Bootstrap CSS
     return (
-      <table className="table table-bordered table-hover" width="100%">
-        {tableHeaders}
-        <tbody>{tableBody}</tbody>
-      </table>
+      <div>
+        <table className="table table-bordered table-hover" width="100%">
+          {tableHeaders}
+          <tbody>{tableBody}</tbody>
+        </table>
+        {downloadLink}
+      </div>
     );
   }
 
@@ -58,6 +84,16 @@ class TableComponent extends Component {
   }
   handleDelete(e) {
     this.props.handleDelete(e);
+  }
+  handleDownload(e) {
+    this.setState({
+      downloadData: [
+        { firstname: "Ahmed", lastname: "Tomi", email: "ah@smthing.co.com" },
+        { firstname: "Raed", lastname: "Labes", email: "rl@smthing.co.com" },
+        { firstname: "Yezzi", lastname: "Min l3b", email: "ymin@cocococo.com" }
+      ],
+      downloadLink: true
+    });
   }
 }
 
