@@ -27,3 +27,4 @@ yarn-error.log*
 *-lock.json
 *.lock
 
+titan-config.js
