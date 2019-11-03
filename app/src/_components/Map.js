@@ -4,6 +4,9 @@ import "./Map.css";
 
 import TableComponent from "./TableComponent";
 
+const url = `http://localhost:4000/api/group`;
+// const url = `https://map247.razrlab.com/api/group`;
+
 class Map extends Component {
   state = {
     newPolygon: false,
@@ -153,6 +156,7 @@ class Map extends Component {
   }
 
   async handleEdit(e) {
+    // debugger;
     const _id = e.target.value;
     const isSelected = true;
     const selectedData = this.state.tableData.rows.find(item => {
@@ -175,30 +179,37 @@ class Map extends Component {
     }
   }
 
-  handleDelete(e) {
+  async handleDelete(e) {
     const confirmed = window.confirm(`Are you sure you want to delete?`);
     if (confirmed) {
-      const _id = e.target.value;
-      //deselect the layer
-      const isSelected = false;
+      try {
+        const _id = e.target.value;
+        //deselect the layer
+        const isSelected = false;
 
-      const selectedData = this.state.tableData.rows.find(item => {
-        return _id.toString() === item._id.toString();
-      });
-      if (selectedData && selectedData.layer) {
-        this.renderSelectedPolygon(selectedData, isSelected);
-      }
-
-      //refine the state of tabledata
-      const rows = this.state.tableData.rows.filter(item => {
-        return item._id && _id && item._id.toString() !== _id.toString();
-      });
-      this.setState({
-        tableData: {
-          ...this.state.tableData,
-          rows: rows
+        const selectedData = this.state.tableData.rows.find(item => {
+          return _id.toString() === item._id.toString();
+        });
+        if (selectedData && selectedData.layer) {
+          this.renderSelectedPolygon(selectedData, isSelected);
         }
-      });
+
+        await this.handleDelete(selectedData);
+
+        //refine the state of tabledata
+        const rows = this.state.tableData.rows.filter(item => {
+          return item._id && _id && item._id.toString() !== _id.toString();
+        });
+        this.setState({
+          tableData: {
+            ...this.state.tableData,
+            rows: rows
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        alert("An error occurred while deleting...");
+      }
     }
   }
 
@@ -299,49 +310,64 @@ class Map extends Component {
   }
 
   async sumbitNewPolygon() {
-    if (
-      this.state.editPolygonDetails.name !== "" &&
-      this.state.editPolygonDetails.layer
-    ) {
-      //name validation
-      const existingName = this.state.tableData.rows.find(
-        item => item.name === this.state.editPolygonDetails.name
-      );
-      if (existingName) {
-        alert(`Name already exists`);
-        return;
+    try {
+      if (
+        this.state.editPolygonDetails.name !== "" &&
+        this.state.editPolygonDetails.layer
+      ) {
+        //name validation
+        const existingName = this.state.tableData.rows.find(
+          item => item.name === this.state.editPolygonDetails.name
+        );
+        if (existingName) {
+          alert(`Name already exists`);
+          return;
+        }
+
+        await this.saveGroup(this.state.editPolygonDetails);
+
+        await this.addNewPolygon(this.state.editPolygonDetails);
+        this.resetForm();
+        this.disablePolygonEditControl();
+        await this.removeAllPolygonsFromMap();
+      } else {
+        alert(`Please input a valid name and shape`);
       }
-      await this.addNewPolygon(this.state.editPolygonDetails);
-      this.resetForm();
-      this.disablePolygonEditControl();
-      await this.removeAllPolygonsFromMap();
-    } else {
-      alert(`Please input a valid name and shape`);
+    } catch (err) {
+      console.log(err);
+      alert(`An error occurred while editing`);
     }
   }
 
   async sumbitEditedPolygon() {
-    if (
-      this.state.editPolygonDetails.name !== "" &&
-      this.state.editPolygonDetails.layer
-    ) {
-      //name validation
-      const existingName = this.state.tableData.rows.find(
-        item =>
-          item.name === this.state.editPolygonDetails.name &&
-          item._id.toString() !== this.state.editPolygonDetails._id.toString()
-      );
-      if (existingName) {
-        alert(`Name already exists`);
-        return;
-      }
+    try {
+      if (
+        this.state.editPolygonDetails.name !== "" &&
+        this.state.editPolygonDetails.layer
+      ) {
+        //name validation
+        const existingName = this.state.tableData.rows.find(
+          item =>
+            item.name === this.state.editPolygonDetails.name &&
+            item._id.toString() !== this.state.editPolygonDetails._id.toString()
+        );
+        if (existingName) {
+          alert(`Name already exists`);
+          return;
+        }
 
-      await this.addEditedPolygon(this.state.editPolygonDetails);
-      this.resetForm();
-      this.disablePolygonEditControl();
-      await this.removeAllPolygonsFromMap();
-    } else {
-      alert(`Please input a valid name and shape`);
+        await this.updateGroup(this.state.editPolygonDetails);
+
+        await this.addEditedPolygon(this.state.editPolygonDetails);
+        this.resetForm();
+        this.disablePolygonEditControl();
+        await this.removeAllPolygonsFromMap();
+      } else {
+        alert(`Please input a valid name and shape`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`An error occurred while editing`);
     }
   }
 
@@ -411,23 +437,12 @@ class Map extends Component {
   }
 
   async run() {
-    try {
-      const groups = await this.getGroups();
-      console.log(groups);
-      this.populateGroups(groups);
-      if (groups && groups.length) {
-        //do something
-      }
-
-      let postcodeWithRegions = await this.getGroupToRegions();
-      this.setState({
-        postcodeWithRegions: postcodeWithRegions
-      });
-    } catch (err) {
-      alert(err);
-    }
-    this.onLoad();
+    await this.onLoad();
     this.addControls();
+    const groups = await this.getGroups();
+    if (groups && groups.length) {
+      this.populateGroups(groups);
+    }
   }
 
   populateGroups(groups) {
@@ -437,7 +452,7 @@ class Map extends Component {
           return item.name && item.geoJSON && item._id;
         })
         .map(item => {
-          item.layer = window.L.geoJson(item.geoJSON);
+          item.layer = window.L.GeoJSON.geometryToLayer(item.geoJSON);
           return item;
         });
       this.setState({
@@ -467,28 +482,78 @@ class Map extends Component {
     });
   }
 
-  updateGroup(group) {
+  saveGroup(polygonDetails) {
     return new Promise((resolve, reject) => {
-      axios
-        .put(`http://localhost:4000/api/group`)
-        .then(res => {
-          if (res && res.data && res.data.message) {
-            resolve(res.data.message);
-          } else {
-            reject(new Error("There is no data"));
-          }
-          resolve();
-        })
-        .catch(err => {
-          reject(err);
-        });
+      if (
+        polygonDetails &&
+        polygonDetails &&
+        polygonDetails.layer &&
+        polygonDetails.name &&
+        polygonDetails.layer.toGeoJSON() &&
+        polygonDetails.layer.toGeoJSON().geometry
+      ) {
+        let group = Object.assign({}, polygonDetails);
+        if (!group.geoJSON) {
+          group.geoJSON = group.layer.toGeoJSON().geometry;
+          delete group.layer;
+        }
+        axios
+          .post(url, group)
+          .then(res => {
+            if (res && res.data && res.data.message) {
+              resolve(res.data.message);
+            } else {
+              reject(new Error("There is no data"));
+            }
+            resolve();
+          })
+          .catch(err => {
+            reject(err);
+          });
+      } else {
+        reject(new Error(`Insufficient parameters are being sent`));
+      }
+    });
+  }
+
+  updateGroup(polygonDetails) {
+    return new Promise((resolve, reject) => {
+      if (
+        polygonDetails &&
+        polygonDetails &&
+        polygonDetails.layer &&
+        polygonDetails.name &&
+        polygonDetails.layer.toGeoJSON() &&
+        polygonDetails.layer.toGeoJSON().geometry
+      ) {
+        let group = Object.assign({}, polygonDetails);
+        if (!group.geoJSON) {
+          group.geoJSON = group.layer.toGeoJSON().geometry;
+          delete group.layer;
+        }
+        axios
+          .put(url, group)
+          .then(res => {
+            if (res && res.data && res.data.message) {
+              resolve(res.data.message);
+            } else {
+              reject(new Error("There is no data"));
+            }
+            resolve();
+          })
+          .catch(err => {
+            reject(err);
+          });
+      } else {
+        reject(new Error(`Insufficient parameters are being sent`));
+      }
     });
   }
 
   deleteGroup(group) {
     return new Promise((resolve, reject) => {
       axios
-        .delete(`http://localhost:4000/api/group`)
+        .delete(url, { _id: group._id })
         .then(res => {
           if (res && res.data && res.data.message) {
             resolve(res.data.message);
@@ -1031,44 +1096,61 @@ class Map extends Component {
       .addTo(this.mapElement);
   }
 
+  initEditableLayer() {
+    this.editableLayers = new window.L.FeatureGroup();
+    this.mapElement.addLayer(this.editableLayers);
+  }
+
+  initDrawControls() {
+    let drawPluginOptions = {
+      position: "topright",
+      draw: {
+        polygon: {
+          allowIntersection: false, // Restricts shapes to simple polygons
+          drawError: {
+            color: "#e1e100", // Color the shape will turn when intersects
+            message: "<strong>Oh snap!<strong> you can't draw that!" // Message that will show when intersect
+          },
+          shapeOptions: {
+            color: "#97009c"
+          }
+        },
+        // disable toolbar item by setting it to false
+        polyline: false,
+        circle: false, // Turns off this drawing tool
+        rectangle: false,
+        marker: false
+      },
+      edit: {
+        featureGroup: this.editableLayers, //REQUIRED!!
+        remove: false
+      }
+    };
+    this.drawControl = new window.L.Control.Draw(drawPluginOptions);
+  }
+
   enablePolygonEditControl() {
-    const L = window.L;
     const map = this.mapElement;
 
-    if (!this.drawControl || !this.editableLayers) {
-      this.editableLayers = new L.FeatureGroup();
-      map.addLayer(this.editableLayers);
+    map.on("draw:created", e => {
+      console.log("draw:created");
+      const layer = e.layer;
 
-      let drawPluginOptions = {
-        position: "topright",
-        draw: {
-          polygon: {
-            allowIntersection: false, // Restricts shapes to simple polygons
-            drawError: {
-              color: "#e1e100", // Color the shape will turn when intersects
-              message: "<strong>Oh snap!<strong> you can't draw that!" // Message that will show when intersect
-            },
-            shapeOptions: {
-              color: "#97009c"
-            }
-          },
-          // disable toolbar item by setting it to false
-          polyline: false,
-          circle: false, // Turns off this drawing tool
-          rectangle: false,
-          marker: false
+      this.setState({
+        editPolygonDetails: {
+          ...this.state.editPolygonDetails,
+          layer: layer
         },
-        edit: {
-          featureGroup: this.editableLayers, //REQUIRED!!
-          remove: false
-        }
-      };
-      this.drawControl = new L.Control.Draw(drawPluginOptions);
+        currentPolygonsInView: [layer]
+      });
 
-      map.on("draw:created", e => {
-        console.log("draw:created");
-        const layer = e.layer;
+      this.editableLayers.addLayer(layer);
+    });
 
+    map.on("draw:edited", e => {
+      console.log("draw:edited");
+      const layers = e.layers;
+      layers.eachLayer(layer => {
         this.setState({
           editPolygonDetails: {
             ...this.state.editPolygonDetails,
@@ -1076,24 +1158,8 @@ class Map extends Component {
           },
           currentPolygonsInView: [layer]
         });
-
-        this.editableLayers.addLayer(layer);
       });
-
-      map.on("draw:edited", e => {
-        console.log("draw:edited");
-        const layers = e.layers;
-        layers.eachLayer(layer => {
-          this.setState({
-            editPolygonDetails: {
-              ...this.state.editPolygonDetails,
-              layer: layer
-            },
-            currentPolygonsInView: [layer]
-          });
-        });
-      });
-    }
+    });
 
     map.addControl(this.drawControl);
   }
@@ -1105,183 +1171,189 @@ class Map extends Component {
   }
 
   onLoad() {
-    const L = window.L;
-    const $ = window.$;
-    const config = window.config;
-    const loading = L.control({ position: "bottomright" }),
-      loaded = {
-        areas: false,
-        districts: false,
-        sectors: false
-      },
-      geoJsonLayerOptions = {
-        style: config.shapeStyle,
-        onEachFeature: onEachFeature
-      },
-      layerAreas = L.geoJson(null, geoJsonLayerOptions),
-      layerDistricts = L.geoJson(null, geoJsonLayerOptions),
-      layerSectors = L.geoJson(null, geoJsonLayerOptions),
-      layerGoogle = L.tileLayer(
-        "http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}?key=AIzaSyC0AJcO-U5RksjP02AQHxEuFlEW5xSKzp8",
-        {
-          maxZoom: 20,
-          subdomains: ["mt0", "mt1", "mt2", "mt3"]
-        }
-      ),
-      layerOSM = L.tileLayer(config.openStreetMap.url, {
-        // OpenStreetMap tile layer (default)
-        attribution: config.openStreetMap.attribution,
-        maxZoom: config.zoom.max
-      }),
-      tileMaps = {
-        // Tile map layer switcher
-        "Google Maps": layerGoogle,
-        RAZRMAPS: layerOSM
-      },
-      overlayMaps = {
-        // GeoJSON layer switcher
-        Areas: layerAreas,
-        Districts: layerDistricts,
-        Sectors: layerSectors
-      },
-      map = L.map("map", {
-        // Setup map object
-        center: [53.21919, -1.86768],
-        zoom: 7,
-        layers: [layerOSM]
+    return new Promise((resolve, reject) => {
+      const L = window.L;
+      const $ = window.$;
+      const config = window.config;
+      const loading = L.control({ position: "bottomright" }),
+        loaded = {
+          areas: false,
+          districts: false,
+          sectors: false
+        },
+        geoJsonLayerOptions = {
+          style: config.shapeStyle,
+          onEachFeature: onEachFeature
+        },
+        layerAreas = L.geoJson(null, geoJsonLayerOptions),
+        layerDistricts = L.geoJson(null, geoJsonLayerOptions),
+        layerSectors = L.geoJson(null, geoJsonLayerOptions),
+        layerGoogle = L.tileLayer(
+          "http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}?key=AIzaSyC0AJcO-U5RksjP02AQHxEuFlEW5xSKzp8",
+          {
+            maxZoom: 20,
+            subdomains: ["mt0", "mt1", "mt2", "mt3"]
+          }
+        ),
+        layerOSM = L.tileLayer(config.openStreetMap.url, {
+          // OpenStreetMap tile layer (default)
+          attribution: config.openStreetMap.attribution,
+          maxZoom: config.zoom.max
+        }),
+        tileMaps = {
+          // Tile map layer switcher
+          "Google Maps": layerGoogle,
+          RAZRMAPS: layerOSM
+        },
+        overlayMaps = {
+          // GeoJSON layer switcher
+          Areas: layerAreas,
+          Districts: layerDistricts,
+          Sectors: layerSectors
+        },
+        map = L.map("map", {
+          // Setup map object
+          center: [53.21919, -1.86768],
+          zoom: 7,
+          layers: [layerOSM]
+        });
+
+      const sidebar = L.control.sidebar("sidebar", {
+        closeButton: true,
+        position: "left"
+      });
+      map.addControl(sidebar);
+
+      //expose some elements
+      this.sidebarElement = sidebar;
+      this.mapElement = map;
+
+      // Add layers control
+      L.control.layers(tileMaps, overlayMaps, { collapsed: false }).addTo(map);
+
+      this.initEditableLayer();
+      this.initDrawControls();
+
+      // For each feature, set random fill colour and bind 'name' label
+      function onEachFeature(feature, layer) {
+        layer.setStyle({ fillColor: randomColor() });
+        layer.bindLabel(feature.properties.name, { noHide: true });
+      }
+
+      function randomRange(min, max) {
+        return Math.floor(Math.random() * (max - min)) + min;
+      }
+
+      function randomColor() {
+        return (
+          "rgb(" +
+          randomRange(0, 256) +
+          "," +
+          randomRange(0, 256) +
+          "," +
+          randomRange(0, 256) +
+          ")"
+        );
+      }
+
+      // Setup GeoJSON loading indicator and add to map
+      loading.onAdd = function() {
+        const div = L.DomUtil.create("div", "control loader");
+
+        div.innerHTML = `
+              <div>\
+                  Areas... <span id="loadAreas">&#x21BB;</span><br>
+                  Districts... <span id="loadDistricts">&#x21BB;</span><br>
+                  Sectors... <span id="loadSectors">&#x21BB;</span>
+              </div>
+              `;
+
+        return div;
+      };
+      loading.addTo(map);
+
+      // Automatically set the GeoJSON layer depending on zoom level
+      // map.on("zoomend", function() {
+      //   if (!(loaded.areas && loaded.districts && loaded.sectors)) {
+      //     return;
+      //   }
+
+      //   const zoom = map.getZoom();
+
+      //   if (
+      //     zoom >= config.zoom.areas &&
+      //     zoom < config.zoom.districts &&
+      //     !map.hasLayer(layerAreas)
+      //   ) {
+      //     map.removeLayer(layerDistricts);
+      //     map.removeLayer(layerSectors);
+      //     map.addLayer(layerAreas);
+      //   } else if (
+      //     zoom >= config.zoom.districts &&
+      //     zoom < config.zoom.sectors &&
+      //     !map.hasLayer(layerDistricts)
+      //   ) {
+      //     map.removeLayer(layerAreas);
+      //     map.removeLayer(layerSectors);
+      //     map.addLayer(layerDistricts);
+      //   } else if (zoom >= config.zoom.sectors && !map.hasLayer(layerSectors)) {
+      //     map.removeLayer(layerAreas);
+      //     map.removeLayer(layerDistricts);
+      //     map.addLayer(layerSectors);
+      //   }
+      // });
+
+      // Load postcode Areas GeoJSON file
+      $.getJSON(config.files.areas, function(data) {
+        // Add loaded GeoJSON data to layer
+        layerAreas.addData(data.features);
+
+        // Show Areas layer by default
+        map.addLayer(layerAreas);
+
+        loaded.areas = true;
+        $("#loadAreas").html("&#x2713;");
+      }).error(function(error) {
+        console.error(
+          "Failed loading '" + config.files.areas + "'",
+          "Error: " + error.statusText
+        );
+
+        $("#loadAreas").html("&#x2717;");
       });
 
-    const sidebar = L.control.sidebar("sidebar", {
-      closeButton: true,
-      position: "left"
-    });
-    map.addControl(sidebar);
+      // Load postcode Districts GeoJSON file
+      $.getJSON(config.files.districts, function(data) {
+        // Add loaded GeoJSON data to layer
+        layerDistricts.addData(data.features);
 
-    //expose some elements
-    this.sidebarElement = sidebar;
-    this.mapElement = map;
+        loaded.districts = true;
+        $("#loadDistricts").html("&#x2713;");
+      }).error(function(error) {
+        console.error(
+          "Failed loading '" + config.files.districts + "'",
+          "Error: " + error.statusText
+        );
 
-    // Add layers control
-    L.control.layers(tileMaps, overlayMaps, { collapsed: false }).addTo(map);
+        $("#loadDistricts").html("&#x2717;");
+      });
 
-    // For each feature, set random fill colour and bind 'name' label
-    function onEachFeature(feature, layer) {
-      layer.setStyle({ fillColor: randomColor() });
-      layer.bindLabel(feature.properties.name, { noHide: true });
-    }
+      // Load postcode Sectors GeoJSON file
+      $.getJSON(config.files.sectors, function(data) {
+        // Add loaded GeoJSON data to layer
+        layerSectors.addData(data.features);
 
-    function randomRange(min, max) {
-      return Math.floor(Math.random() * (max - min)) + min;
-    }
+        loaded.sectors = true;
+        $("#loadSectors").html("&#x2713;");
+      }).error(function(error) {
+        console.error(
+          "Failed loading '" + config.files.sectors + "'",
+          "Error: " + error.statusText
+        );
 
-    function randomColor() {
-      return (
-        "rgb(" +
-        randomRange(0, 256) +
-        "," +
-        randomRange(0, 256) +
-        "," +
-        randomRange(0, 256) +
-        ")"
-      );
-    }
-
-    // Setup GeoJSON loading indicator and add to map
-    loading.onAdd = function() {
-      const div = L.DomUtil.create("div", "control loader");
-
-      div.innerHTML = `
-            <div>\
-                Areas... <span id="loadAreas">&#x21BB;</span><br>
-                Districts... <span id="loadDistricts">&#x21BB;</span><br>
-                Sectors... <span id="loadSectors">&#x21BB;</span>
-            </div>
-            `;
-
-      return div;
-    };
-    loading.addTo(map);
-
-    // Automatically set the GeoJSON layer depending on zoom level
-    // map.on("zoomend", function() {
-    //   if (!(loaded.areas && loaded.districts && loaded.sectors)) {
-    //     return;
-    //   }
-
-    //   const zoom = map.getZoom();
-
-    //   if (
-    //     zoom >= config.zoom.areas &&
-    //     zoom < config.zoom.districts &&
-    //     !map.hasLayer(layerAreas)
-    //   ) {
-    //     map.removeLayer(layerDistricts);
-    //     map.removeLayer(layerSectors);
-    //     map.addLayer(layerAreas);
-    //   } else if (
-    //     zoom >= config.zoom.districts &&
-    //     zoom < config.zoom.sectors &&
-    //     !map.hasLayer(layerDistricts)
-    //   ) {
-    //     map.removeLayer(layerAreas);
-    //     map.removeLayer(layerSectors);
-    //     map.addLayer(layerDistricts);
-    //   } else if (zoom >= config.zoom.sectors && !map.hasLayer(layerSectors)) {
-    //     map.removeLayer(layerAreas);
-    //     map.removeLayer(layerDistricts);
-    //     map.addLayer(layerSectors);
-    //   }
-    // });
-
-    // Load postcode Areas GeoJSON file
-    $.getJSON(config.files.areas, function(data) {
-      // Add loaded GeoJSON data to layer
-      layerAreas.addData(data.features);
-
-      // Show Areas layer by default
-      map.addLayer(layerAreas);
-
-      loaded.areas = true;
-      $("#loadAreas").html("&#x2713;");
-    }).error(function(error) {
-      console.error(
-        "Failed loading '" + config.files.areas + "'",
-        "Error: " + error.statusText
-      );
-
-      $("#loadAreas").html("&#x2717;");
-    });
-
-    // Load postcode Districts GeoJSON file
-    $.getJSON(config.files.districts, function(data) {
-      // Add loaded GeoJSON data to layer
-      layerDistricts.addData(data.features);
-
-      loaded.districts = true;
-      $("#loadDistricts").html("&#x2713;");
-    }).error(function(error) {
-      console.error(
-        "Failed loading '" + config.files.districts + "'",
-        "Error: " + error.statusText
-      );
-
-      $("#loadDistricts").html("&#x2717;");
-    });
-
-    // Load postcode Sectors GeoJSON file
-    $.getJSON(config.files.sectors, function(data) {
-      // Add loaded GeoJSON data to layer
-      layerSectors.addData(data.features);
-
-      loaded.sectors = true;
-      $("#loadSectors").html("&#x2713;");
-    }).error(function(error) {
-      console.error(
-        "Failed loading '" + config.files.sectors + "'",
-        "Error: " + error.statusText
-      );
-
-      $("#loadSectors").html("&#x2717;");
+        $("#loadSectors").html("&#x2717;");
+      });
+      resolve();
     });
   }
 
