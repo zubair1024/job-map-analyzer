@@ -1,4 +1,5 @@
 import React, { Component } from "react";
+import axios from "axios";
 import "./Map.css";
 
 import TableComponent from "./TableComponent";
@@ -11,7 +12,7 @@ class Map extends Component {
       layer: null
     },
     tableData: {
-      columns: ["Group"],
+      columns: ["name"],
       rows: []
     },
     currentPolygonsInView: [],
@@ -40,23 +41,6 @@ class Map extends Component {
               >
                 Create New
               </button>
-
-              {/* <div className="form-group">
-                <label for="exampleInputEmail1">Email address</label>
-                <input
-                  type="email"
-                  className="form-control"
-                  id="exampleInputEmail1"
-                  aria-describedby="emailHelp"
-                  placeholder="Enter email"
-                ></input>
-                <small id="emailHelp" className="form-text text-muted">
-                  We'll never share your email with anyone else.
-                </small>
-              </div>
-              <button type="submit" className="btn btn-primary">
-                Submit
-              </button> */}
             </div>
           )}
 
@@ -184,7 +168,7 @@ class Map extends Component {
         editPolygon: true,
         editPolygonDetails: {
           _id: _id,
-          name: selectedData.Group,
+          name: selectedData.name,
           layer: selectedData.layer
         }
       });
@@ -236,7 +220,7 @@ class Map extends Component {
       polygon.addTo(this.mapElement);
       //add label to map
       const label = new window.L.Label();
-      label.setContent(data.Group);
+      label.setContent(data.name);
       label.setLatLng(polygon.getBounds().getCenter());
       label._parentId = data._id;
       polygon.bindLabel(label);
@@ -321,13 +305,12 @@ class Map extends Component {
     ) {
       //name validation
       const existingName = this.state.tableData.rows.find(
-        item => item.Group === this.state.editPolygonDetails.name
+        item => item.name === this.state.editPolygonDetails.name
       );
       if (existingName) {
         alert(`Name already exists`);
         return;
       }
-
       await this.addNewPolygon(this.state.editPolygonDetails);
       this.resetForm();
       this.disablePolygonEditControl();
@@ -345,7 +328,7 @@ class Map extends Component {
       //name validation
       const existingName = this.state.tableData.rows.find(
         item =>
-          item.Group === this.state.editPolygonDetails.name &&
+          item.name === this.state.editPolygonDetails.name &&
           item._id.toString() !== this.state.editPolygonDetails._id.toString()
       );
       if (existingName) {
@@ -370,7 +353,7 @@ class Map extends Component {
             ...this.state.tableData.rows,
             {
               _id: Math.random(),
-              Group: data.name,
+              name: data.name,
               layer: data.layer
             }
           ]
@@ -428,12 +411,96 @@ class Map extends Component {
   }
 
   async run() {
-    let postcodeWithRegions = await this.getGroupToRegions();
-    this.setState({
-      postcodeWithRegions: postcodeWithRegions
-    });
+    try {
+      const groups = await this.getGroups();
+      console.log(groups);
+      this.populateGroups(groups);
+      if (groups && groups.length) {
+        //do something
+      }
+
+      let postcodeWithRegions = await this.getGroupToRegions();
+      this.setState({
+        postcodeWithRegions: postcodeWithRegions
+      });
+    } catch (err) {
+      alert(err);
+    }
     this.onLoad();
     this.addControls();
+  }
+
+  populateGroups(groups) {
+    if (groups && groups.length) {
+      const data = groups
+        .filter(item => {
+          return item.name && item.geoJSON && item._id;
+        })
+        .map(item => {
+          item.layer = window.L.geoJson(item.geoJSON);
+          return item;
+        });
+      this.setState({
+        tableData: {
+          ...this.state.tableData,
+          rows: data
+        }
+      });
+    }
+  }
+
+  getGroups() {
+    return new Promise((resolve, reject) => {
+      axios
+        .get(`http://localhost:4000/api/group`)
+        .then(res => {
+          if (res && res.data && res.data.data) {
+            resolve(res.data.data);
+          } else {
+            reject(new Error("There is no data"));
+          }
+          resolve();
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
+  }
+
+  updateGroup(group) {
+    return new Promise((resolve, reject) => {
+      axios
+        .put(`http://localhost:4000/api/group`)
+        .then(res => {
+          if (res && res.data && res.data.message) {
+            resolve(res.data.message);
+          } else {
+            reject(new Error("There is no data"));
+          }
+          resolve();
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
+  }
+
+  deleteGroup(group) {
+    return new Promise((resolve, reject) => {
+      axios
+        .delete(`http://localhost:4000/api/group`)
+        .then(res => {
+          if (res && res.data && res.data.message) {
+            resolve(res.data.message);
+          } else {
+            reject(new Error("There is no data"));
+          }
+          resolve();
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
   }
 
   getLeads() {

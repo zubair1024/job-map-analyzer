@@ -36,7 +36,7 @@ class TableComponent extends Component {
               onChange={this.handleShow.bind(this)}
             />
           </td>
-          <td key={`column${{ idx }}`}>{row.Group}</td>
+          <td key={`column${{ idx }}`}>{row.name}</td>
           <td key={`edit${idx}`}>
             <button
               className="btn btn-dark"
