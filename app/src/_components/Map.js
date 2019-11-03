@@ -4,8 +4,8 @@ import "./Map.css";
 
 import TableComponent from "./TableComponent";
 
-// const url = `http://localhost:4000/api/group`;
-const url = `https://map247.razrlab.com/api/group`;
+const url = `http://localhost:4000/api/group`;
+// const url = `https://map247.razrlab.com/api/group`;
 
 class Map extends Component {
   state = {
@@ -75,7 +75,7 @@ class Map extends Component {
                 <button
                   className="btn btn-dark"
                   onClick={() => {
-                    this.sumbitNewPolygon();
+                    this.submitNewPolygon();
                   }}
                 >
                   Save
@@ -120,7 +120,7 @@ class Map extends Component {
                 <button
                   className="btn btn-dark"
                   onClick={() => {
-                    this.sumbitEditedPolygon();
+                    this.submitEditedPolygon();
                   }}
                 >
                   Save
@@ -180,10 +180,10 @@ class Map extends Component {
   }
 
   async handleDelete(e) {
+    const _id = e.target.value;
     const confirmed = window.confirm(`Are you sure you want to delete?`);
     if (confirmed) {
       try {
-        const _id = e.target.value;
         //deselect the layer
         const isSelected = false;
 
@@ -194,18 +194,19 @@ class Map extends Component {
           this.renderSelectedPolygon(selectedData, isSelected);
         }
 
-        await this.handleDelete(selectedData);
+        const deletedGroup = await this.deleteGroup(selectedData);
 
-        //refine the state of tabledata
-        const rows = this.state.tableData.rows.filter(item => {
-          return item._id && _id && item._id.toString() !== _id.toString();
-        });
-        this.setState({
-          tableData: {
-            ...this.state.tableData,
-            rows: rows
-          }
-        });
+        if (deletedGroup) {
+          const rows = this.state.tableData.rows.filter(item => {
+            return item._id && _id && item._id.toString() !== _id.toString();
+          });
+          this.setState({
+            tableData: {
+              ...this.state.tableData,
+              rows: rows
+            }
+          });
+        }
       } catch (err) {
         console.error(err);
         alert("An error occurred while deleting...");
@@ -309,7 +310,7 @@ class Map extends Component {
     this.enablePolygonEditControl();
   }
 
-  async sumbitNewPolygon() {
+  async submitNewPolygon() {
     try {
       if (
         this.state.editPolygonDetails.name !== "" &&
@@ -324,12 +325,16 @@ class Map extends Component {
           return;
         }
 
-        await this.saveGroup(this.state.editPolygonDetails);
+        const newPolygon = await this.saveGroup(this.state.editPolygonDetails);
 
-        await this.addNewPolygon(this.state.editPolygonDetails);
-        this.resetForm();
-        this.disablePolygonEditControl();
-        await this.removeAllPolygonsFromMap();
+        if (newPolygon) {
+          await this.addNewPolygon(newPolygon);
+          this.resetForm();
+          this.disablePolygonEditControl();
+          await this.removeAllPolygonsFromMap();
+        } else {
+          throw new Error(`new polygon not returned`);
+        }
       } else {
         alert(`Please input a valid name and shape`);
       }
@@ -339,7 +344,7 @@ class Map extends Component {
     }
   }
 
-  async sumbitEditedPolygon() {
+  async submitEditedPolygon() {
     try {
       if (
         this.state.editPolygonDetails.name !== "" &&
@@ -356,12 +361,18 @@ class Map extends Component {
           return;
         }
 
-        await this.updateGroup(this.state.editPolygonDetails);
+        const newPolygon = await this.updateGroup(
+          this.state.editPolygonDetails
+        );
 
-        await this.addEditedPolygon(this.state.editPolygonDetails);
-        this.resetForm();
-        this.disablePolygonEditControl();
-        await this.removeAllPolygonsFromMap();
+        if (newPolygon) {
+          await this.addEditedPolygon(newPolygon);
+          this.resetForm();
+          this.disablePolygonEditControl();
+          await this.removeAllPolygonsFromMap();
+        } else {
+          throw new Error("new polygon not returned");
+        }
       } else {
         alert(`Please input a valid name and shape`);
       }
@@ -378,9 +389,11 @@ class Map extends Component {
           rows: [
             ...this.state.tableData.rows,
             {
-              _id: Math.random(),
+              _id: data._id,
               name: data.name,
               layer: data.layer
+                ? data.layer
+                : window.L.GeoJSON.geometryToLayer(data.geoJSON)
             }
           ]
         }
@@ -500,12 +513,11 @@ class Map extends Component {
         axios
           .post(url, group)
           .then(res => {
-            if (res && res.data && res.data.message) {
-              resolve(res.data.message);
+            if (res && res.data && res.data.data) {
+              resolve(res.data.data);
             } else {
               reject(new Error("There is no data"));
             }
-            resolve();
           })
           .catch(err => {
             reject(err);
@@ -534,12 +546,11 @@ class Map extends Component {
         axios
           .put(url, group)
           .then(res => {
-            if (res && res.data && res.data.message) {
-              resolve(res.data.message);
+            if (res && res.data && res.data.data) {
+              resolve(res.data.data);
             } else {
               reject(new Error("There is no data"));
             }
-            resolve();
           })
           .catch(err => {
             reject(err);
@@ -553,7 +564,11 @@ class Map extends Component {
   deleteGroup(group) {
     return new Promise((resolve, reject) => {
       axios
-        .delete(url, { _id: group._id })
+        .delete(url, {
+          data: {
+            _id: group._id
+          }
+        })
         .then(res => {
           if (res && res.data && res.data.message) {
             resolve(res.data.message);

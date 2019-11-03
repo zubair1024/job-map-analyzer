@@ -100,10 +100,10 @@ db.checkConnection(() => {
       const name = req.body.name;
       const geoJSON = req.body.geoJSON;
       if (name && geoJSON) {
-        await db.Group(req.body).save();
+        const newGroup  = await db.Group(req.body).save();
         res.status(200).send({
           status: "success",
-          message: "Sucessfully Created"
+          data: newGroup
         });
       } else {
         throw new Error("Insufficent Parameters");
@@ -121,10 +121,14 @@ db.checkConnection(() => {
       const name = req.body.name;
       const geoJSON = req.body.geoJSON;
       if (_id && name && geoJSON) {
-        await db.Group.updateOne({ _id: _id }, { $set: req.body }).exec();
+        const newGroup = await db.Group.updateOne(
+          { _id: _id },
+          { $set: req.body },
+          { new: true }
+        ).exec();
         res.status(200).send({
           status: "success",
-          message: "Sucessfully Updated"
+          data: newGroup
         });
       } else {
         throw new Error("Insufficent Parameters");
