@@ -467,7 +467,7 @@ class Map extends Component {
   getGroups() {
     return new Promise((resolve, reject) => {
       axios
-        .get(`http://localhost:4000/api/group`)
+        .get(url)
         .then(res => {
           if (res && res.data && res.data.data) {
             resolve(res.data.data);
