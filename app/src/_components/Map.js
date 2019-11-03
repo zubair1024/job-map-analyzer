@@ -4,8 +4,8 @@ import "./Map.css";
 
 import TableComponent from "./TableComponent";
 
-const url = `http://localhost:4000/api/group`;
-// const url = `https://map247.razrlab.com/api/group`;
+// const url = `http://localhost:4000/api/group`;
+const url = `https://map247.razrlab.com/api/group`;
 
 class Map extends Component {
   state = {
