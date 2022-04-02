@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
 import axios from 'axios';
+import { dayjsUtil } from '../utils';
 import './Map.css';
 
 import TableComponent from './TableComponent';
+import { isNumber } from '../utils';
 
 // const url = `http://localhost:4000/api/group`;
 const url = `https://map247.razrlab.com/api/group`;
@@ -585,14 +587,40 @@ class Map extends Component {
 
   getLeads() {
     return new Promise((resolve, reject) => {
-      import('../rawdata/new_leads.json')
+      import('../rawdata/new/leads.json')
         .then((data) => {
           if (data && data.default) {
             const validatedData = data.default.filter((item) => {
-              return item.lat && item.lng;
+              return (
+                isNumber(item.lat) &&
+                isNumber(item.lng) &&
+                item.StatusDate !== ''
+              );
             });
-            console.log(`render leads ${validatedData.length}`);
-            resolve(validatedData);
+            //sort
+            const sortedData = validatedData.sort((a, b) => {
+              return new Date(a.StatusDate) - new Date(b.StatusDate);
+            });
+            //sanitize
+            const sanitizedData = sortedData.map((item) => {
+              return {
+                ...item,
+                StatusDate: dayjsUtil(item.StatusDate),
+                FirstTimePolicyLiveDate: dayjsUtil(
+                  item.FirstTimePolicyLiveDate
+                ),
+                CreatedDate: dayjsUtil(item.CreatedDate),
+              };
+            });
+            console.log(`render leads ${sanitizedData.length}`);
+            alert(
+              `render leads between ${sanitizedData[0].StatusDate.format(
+                'YYYY-MM-DD'
+              )} and ${sanitizedData[
+                sanitizedData.length - 1
+              ].StatusDate.format('YYYY-MM-DD')}`
+            );
+            resolve(sanitizedData);
           } else {
             resolve([]);
           }
@@ -624,11 +652,11 @@ class Map extends Component {
 
   getE5Engineers() {
     return new Promise((resolve, reject) => {
-      import('../rawdata/e5Engineers.json')
+      import('../rawdata/new/engineers.json')
         .then((data) => {
           if (data && data.default) {
             const validatedData = data.default.filter((item) => {
-              return item.lat && item.lng;
+              return isNumber(item.lat) && isNumber(item.lng);
             });
             resolve(validatedData);
           } else {
@@ -643,13 +671,37 @@ class Map extends Component {
 
   getBoilerJobs() {
     return new Promise((resolve, reject) => {
-      import('../rawdata/boilerJobs.json')
+      import('../rawdata/new/boiler_jobs.json')
         .then((data) => {
           if (data && data.default) {
             const validatedData = data.default.filter((item) => {
-              return item.lat && item.lng;
+              return (
+                isNumber(item.lat) &&
+                isNumber(item.lng) &&
+                item.AppointmentDate !== ''
+              );
             });
-            resolve(validatedData);
+            const sanitizedData = validatedData.map((item) => {
+              return {
+                ...item,
+                AppointmentDate: dayjsUtil.tz(
+                  item.AppointmentDate,
+                  'DD/MM/YYYY',
+                  'Europe/London'
+                ),
+              };
+            });
+            const sortedData = sanitizedData.sort((a, b) => {
+              a.AppointmentDate.diff(b.AppointmentDate);
+            });
+            alert(
+              `render boiler jobs between ${sortedData[0].AppointmentDate.format(
+                'YYYY-MM-DD'
+              )} and ${sortedData[sortedData.length - 1].AppointmentDate.format(
+                'YYYY-MM-DD'
+              )}`
+            );
+            resolve(sortedData);
           } else {
             resolve([]);
           }
@@ -662,13 +714,37 @@ class Map extends Component {
 
   getServiceJobs() {
     return new Promise((resolve, reject) => {
-      import('../rawdata/serviceJobs.json')
+      import('../rawdata/new/service_jobs.json')
         .then((data) => {
           if (data && data.default) {
             const validatedData = data.default.filter((item) => {
-              return item.lat && item.lng;
+              return (
+                isNumber(item.lat) &&
+                isNumber(item.lng) &&
+                item.AppointmentDate !== ''
+              );
             });
-            resolve(validatedData);
+            const sanitizedData = validatedData.map((item) => {
+              return {
+                ...item,
+                AppointmentDate: dayjsUtil.tz(
+                  item.AppointmentDate,
+                  'DD/MM/YYYY',
+                  'Europe/London'
+                ),
+              };
+            });
+            const sortedData = sanitizedData.sort((a, b) => {
+              a.AppointmentDate.diff(b.AppointmentDate);
+            });
+            alert(
+              `render service jobs between ${sortedData[0].AppointmentDate.format(
+                'YYYY-MM-DD'
+              )} and ${sortedData[sortedData.length - 1].AppointmentDate.format(
+                'YYYY-MM-DD'
+              )}`
+            );
+            resolve(sortedData);
           } else {
             resolve([]);
           }
@@ -915,17 +991,16 @@ class Map extends Component {
     let icon = '';
     switch (type) {
       case 'e5Engineer':
-        icon =
-          'https://res.cloudinary.com/razrlab/image/upload/v1571935748/person-marker_wdvvbm.png';
+        icon = '/icons/person.png';
         break;
       case 'serviceJob':
-        icon =
-          'https://res.cloudinary.com/razrlab/image/upload/v1571935748/service-marker_tzrx0s.png';
+        icon = '/icons/service.png';
         break;
       case 'lead':
+        icon = '/icons/homes.png';
+        break;
       case 'boilerJob':
-        icon =
-          'https://res.cloudinary.com/razrlab/image/upload/v1571935748/home-marker_sskts6.png';
+        icon = '/icons/breakdown.png';
         break;
       default:
         //nothing
