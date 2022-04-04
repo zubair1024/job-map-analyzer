@@ -11,7 +11,7 @@ function getAllAssociates() {
     headers: { 'Content-Type': 'application/json' },
   };
 
-  const API_URL = 'http://localhost:8080';
+  const API_URL = process.env.REACT_APP_API_URL;
 
   console.log(process.env);
 
