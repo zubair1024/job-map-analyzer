@@ -5,11 +5,14 @@ import './Map.css';
 
 import TableComponent from './TableComponent';
 import { isNumber } from '../utils';
+import { associateService } from '../_services';
 
 // const url = `http://localhost:4000/api/group`;
 const url = `https://map247.razrlab.com/api/group`;
 
 class Map extends Component {
+  associateRefresher;
+
   state = {
     newPolygon: false,
     editPolygonDetails: {
@@ -22,6 +25,7 @@ class Map extends Component {
     },
     currentPolygonsInView: [],
     currentPolygonLabels: [],
+    hideAssociateLabels: true,
   };
 
   render() {
@@ -144,6 +148,7 @@ class Map extends Component {
   }
 
   componentDidMount() {
+    console.log('componentDidMount');
     this.run();
   }
 
@@ -901,6 +906,45 @@ class Map extends Component {
     }
   }
 
+  getAssociates() {
+    return associateService.getAllAssociates();
+  }
+
+  async renderAssociates() {
+    const type = 'associate';
+    try {
+      this.removeAssociates();
+      const arrayContent = await this.getAssociates();
+      if (arrayContent && arrayContent.length) {
+        let markerLayer = window.L.markerClusterGroup();
+        let markers = [];
+        arrayContent.forEach((item) => {
+          if (item.latitude && item.longitude) {
+            const marker = window.L.marker([item.latitude, item.longitude], {
+              icon: this.markerIcon(type, item.engineStatus, [30, 30]),
+              rotationAngle: item.heading,
+            }).bindLabel(item.name, {
+              noHide: !this.state.hideAssociateLabels,
+            });
+            marker.bindPopup(this.markerPopupContent(type, item));
+            markerLayer.addLayer(marker);
+            markers.push(marker);
+          }
+        });
+        markerLayer.addTo(this.mapElement);
+        this.setState({
+          [`${type}Cluster`]: markerLayer,
+          [type]: markers,
+        });
+      } else {
+        throw new Error(`No ${type} to be rendered`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Error while rendering ${type}`);
+    }
+  }
+
   async renderServiceJobsHeatMap() {
     const type = 'serviceJob';
     const arrayContent = await this.getServiceJobs();
@@ -986,10 +1030,24 @@ class Map extends Component {
     return content;
   }
 
-  markerIcon(type) {
+  /**
+   *
+   * @param {string} type
+   * @param {string} [status]
+   * @returns
+   */
+  markerIcon(type, status, size) {
     //   "https://res.cloudinary.com/razrlab/image/upload/c_scale,co_rgb:D12711,e_colorize:100,f_png/v1541359481/pin_t5dc4n.png",
     let icon = '';
     switch (type) {
+      case 'associate':
+        icon = '/icons/vehicle_off.png';
+        if (status === 'on') {
+          icon = '/icons/vehicle_on.png';
+        } else if (status === 'off') {
+          icon = '/icons/vehicle_off.png';
+        }
+        break;
       case 'e5Engineer':
         icon = '/icons/person.png';
         break;
@@ -1008,7 +1066,7 @@ class Map extends Component {
     }
     const iconElement = window.L.icon({
       iconUrl: icon,
-      iconSize: [25, 25],
+      iconSize: size ?? [25, 25],
       iconAnchor: [12, 25],
       popupAnchor: [3, -40],
     });
@@ -1032,6 +1090,14 @@ class Map extends Component {
     }
   }
 
+  removeAssociates() {
+    let associateMarkers = this.state.associate;
+    if (associateMarkers && associateMarkers.length) {
+      associateMarkers.forEach((item) => {
+        this.mapElement.removeLayer(item);
+      });
+    }
+  }
   removeE5Engineers() {
     let e5EngineerMarkers = this.state.e5Engineer;
     if (e5EngineerMarkers && e5EngineerMarkers.length) {
@@ -1123,6 +1189,9 @@ class Map extends Component {
           <div class="checkbox">
             <label><input type="checkbox" value="geofenceControls">Polygon Controls</label>
           </div>  
+          <div class="checkbox">
+            <label><input type="checkbox" value="fixedDriverLabels">Fixed Driver Labels</label>
+          </div>  
         </div>
         `,
         classes: 'panel panel-default',
@@ -1175,6 +1244,12 @@ class Map extends Component {
                   data.srcElement.checked
                     ? this.showSideBar()
                     : this.hideSideBar();
+                  break;
+                case 'fixedDriverLabels':
+                  this.setState({
+                    hideAssociateLabels: !data.srcElement.checked,
+                  });
+                  this.renderAssociates();
                   break;
                 default:
                   break;
@@ -1443,6 +1518,10 @@ class Map extends Component {
 
         $('#loadSectors').html('&#x2717;');
       });
+      this.renderAssociates();
+      this.associateRefresher = setInterval(() => {
+        void this.renderAssociates();
+      }, 45 * 1000);
       resolve();
     });
   }
