@@ -22,7 +22,10 @@ function getAllAssociates() {
     'name,imei,latitude,longitude,engineStatus,heading'
   );
 
-  return fetch(`${url.toString()}&&$filter=(pState eq 1)`, requestOptions)
+  return fetch(
+    `${url.toString()}&&$filter=(pState eq 1 and assetAssociateStatus eq 'commissioned')`,
+    requestOptions
+  )
     .then((res) => res.json())
     .then((res) => {
       return res?.data;
